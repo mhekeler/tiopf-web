@@ -1,0 +1,784 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>Persisting and unit testing a simple collection</title>
+<!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>Persisting and unit testing a simple collection</h1>
+<h2>Introduction</h2>
+In this paper we shall build a simple object based application that can
+save its data to a variety database formats. We shall develop the
+object model and persistence code then write the necessary unit tests
+using DUnit2. Finally we shall implement and unit test the business
+rules and build a simple user interface.<br>
+<br>
+The finished results shall look like this:<br>
+<br>
+<img style="width: 398px; height: 311px;" alt=""
+ src="Images/ScreenShot_01.gif"><br>
+<br>
+<h2>The example application we shall build</h2>
+We shall build a simple address-book application that stores names,
+addresses and phone numbers for people. A simplified class diagram is
+shown below:<br>
+<br>
+<img style="width: 245px; height: 190px;" alt=""
+ src="Images/ClassDiagram_01.gif"><br>
+<br>
+Each person may have 0 to many addresses and 0 to many e-addresses
+(phone, fax, mobile, email, skype, website)<br>
+<br>
+We shall develop the business object model (or BOM) and unit test each
+object and object-relationship as we go. This shall be done against a
+Firebird database. When the BOM is complete we shall rough-out a simple
+VCL forms based user interface. Finally, we shall extend the
+application to persist data to both XML and over the internet through
+an application server.<br>
+<h2>Creating the directory structure</h2>
+To get started, we need a project directory structure to hold the
+following:<br>
+<ul>
+  <li>Business object model (BOM);</li>
+  <li>DUnit applications (GUI &amp; Text);</li>
+  <li>GUI application</li>
+  <li>Database</li>
+  <li>EXEs</li>
+  <li>DCUs</li>
+</ul>
+Here&#8217;s the starting directory structure I use:<br>
+<br>
+<img style="width: 183px; height: 155px;" alt=""
+ src="Images/DirectoryTree_01.png"><br>
+<br>
+The BOM directory will hold all non-gui code (The address book classes
+and their persistence code). The GUI directory shall hold the user
+interface code. The DUnit directory shall hold a GUI based test
+application, then later a text based test app that will form part of
+the automated build process.<br>
+<h2>Rough out the projects</h2>
+Create a project group called AdrsBook_ProjectGroup and save it to the
+root.<br>
+<br>
+Create a new VCL Forms application (removing the auto-created main
+form) and save it as DUnit\DUnitAdrsBookGUI.<br>
+<br>
+In Project | Options, set<br>
+<ul>
+  <li>output directory to&nbsp;&nbsp;&nbsp; &nbsp;_bin;</li>
+  <li>Unit output directory to &nbsp;&nbsp;&nbsp; _dcu;</li>
+  <li>Search Path to &nbsp;&nbsp;&nbsp; ..\BOM;</li>
+  <li>Conditional defines to &nbsp;&nbsp;&nbsp;
+DUNIT2;FASTMM;USE_JEDI_JCL (This is necessary for DUnit2&#8217;s leak
+detection)</li>
+</ul>
+Create the following empty PAS files:<br>
+<ul>
+  <li>BOM\Person_BOM.pas</li>
+  <li>DUnit\Person_TST.pas</li>
+</ul>
+Stub out an empty unit test in DUnit\Person_TST.pas like this:<br>
+<br>
+<pre>unit Person_TST;<br><br>interface<br><br>uses<br>&nbsp; tiTestFramework;<br><br>type<br><br>&nbsp; TPersonTestCase = class(TtiTestCase)<br>&nbsp; published<br>&nbsp;&nbsp;&nbsp; procedure PersonList_Read;<br>&nbsp; end;<br><br>implementation<br>uses<br>&nbsp; TestFramework;<br><br>{ TPersonTestCase }<br>procedure TPersonTestCase.PersonList_Read;<br>begin<br>&nbsp; Assert(False, 'Under construction');<br>end;<br><br>initialization<br>&nbsp; RegisterTest(TPersonTestCase.Suite);<br><br>end.<br></pre>
+Note we use TtiTestCase as the parent for TPersonTestCase as we will be
+accessing some specific tiOPF test methods.<br>
+<br>
+DUnitAdrsBookGUI.dpr looks as you would expect:<br>
+<br>
+<pre>program DUnitAdrsBookGUI;<br><br>uses<br>&nbsp; FastMM4,<br>&nbsp; GUITestRunner,<br>&nbsp; Person_TST in 'Person_TST.pas',<br>&nbsp; Person_BOM in '..\BOM\Person_BOM.pas';<br><br>{$R *.res}<br><br>begin<br>&nbsp; GUITestRunner.RunRegisteredTests;<br><br>end.<br></pre>
+Executing DUnitAdrsBookGUI will bring up the following main form
+showing three new buttons &#8216;Leak detection&#8217;, &#8216;Warnings&#8217;, &#8216;Tests without
+Check called&#8217; and &#8216;Summary level testing&#8217;:<br>
+<br>
+<img style="width: 415px; height: 176px;" alt=""
+ src="Images/RoughOutTheProjects_01.gif"><br>
+<br>
+These can be toggled to give more information about each test as it
+executes.<br>
+<h2>Connecting to a database</h2>
+To create an empty database, run the scripts found in the demos
+directory here:<br>
+<br>
+tiOPF2\Demos\Demo_18_AdrsBook\DatabaseCreateScripts<br>
+<br>
+A fragment of this script is shown below:<br>
+<br>
+<pre>Create Database 'Adrs.fdb' user 'SYSDBA' password 'masterkey';<br><br>connect&nbsp; "Adrs.fdb" user "SYSDBA" password "masterkey" ;<br><br>create table person<br>&nbsp; (<br>    oid&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>    varchar(36)&nbsp;&nbsp;&nbsp; not null,<br>&nbsp;&nbsp;&nbsp; first_name     varchar(60),<br>    last_name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; varchar(60),<br>    title&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; varchar(10),<br>    initials&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; varchar(10),<br>&nbsp; );<br><br>alter table person add<br>constraint person_pk<br>primary key (oid);<br></pre>
+Connecting a tiOPF application to a database is a two step process:<br>
+<ul>
+  <li>Registering the persistence layer (eg Firebird, XML, Oracle); then</li>
+  <li>Connecting to the database.</li>
+</ul>
+To register a persistence layer, simply add the appropriate
+tiQueryXXX.pas unit to your project. For example, to register Firebird
+via then InterbaseExpress components that come with Delphi, add the
+unit tiQueryIBX.pas.<br>
+<br>
+To connect to a database, use the tiOPFManager.ConnectDatabase() method:<br>
+<pre>uses<br>&nbsp; &#8230;<br>&nbsp; tiQueryIBX,<br>&nbsp; tiOPFManager,<br>&nbsp; &#8230;<br><span
+ style="font-size: 12pt; font-family: &quot;Garamond&quot;,&quot;serif&quot;;"></span><br>&nbsp; GTIOPFManager.ConnectDatabase(adrs.fdb', 'SYSDBA', 'masterkey');<br></pre>
+<span style="font-size: 12pt; font-family: &quot;Garamond&quot;,&quot;serif&quot;;">Run the
+unit test app again to confirm the database connection works.</span><br>
+<h2>Roughing out the business objects</h2>
+The abstract classes used for building a business object hierarchy are
+TtiObject and TtiObjectList. TtiObject introduces the necessary methods
+and properties for persistence. TthObjectList descends from TtiObject
+and adds list management methods. TtiObject and TtiObjectList are an
+implementation of the <a
+ href="http://en.wikipedia.org/wiki/Design_Patterns">GoF</a> <a
+ href="http://en.wikipedia.org/wiki/Composite_pattern">Composite pattern</a>.<br>
+<br>
+There are some Delphi 2007 code templates in the install and SVN that
+simplify the development of your business object model.<br>
+<ul>
+  <li>tiol &lt;space&gt; will step you through a TtiObjectList
+descendant;</li>
+  <li>tio &lt;space&gt; will step you through a TtiObject descendant;<br>
+  </li>
+</ul>
+We require a TPerson class, as well as a TPersonList container as shown
+in the UML below:<br>
+<br>
+<img style="width: 224px; height: 156px;" alt=""
+ src="Images/RougOutTheBusinessObjects_01.gif"/><br>
+<br>
+In Person_BOM.pas, add the following class definitions:<br>
+<br>
+<pre>uses<br>  tiObject;<br><br>type<br><br>&nbsp; TPerson = class;<br>&nbsp; TPersonList = class;<br><br>&nbsp; TPersonList = class(TtiObjectList)<br>&nbsp; protected<br>&nbsp;&nbsp;&nbsp; function&nbsp;&nbsp;&nbsp; GetItems(i: integer): TPerson; reintroduce;<br>&nbsp;&nbsp;&nbsp; procedure&nbsp;&nbsp; SetItems(i: integer; const AValue: TPerson); reintroduce;<br>&nbsp; public<br>&nbsp;&nbsp;&nbsp; property&nbsp;&nbsp;&nbsp; Items[i:integer]: TPerson read GetItems write SetItems;<br>&nbsp;&nbsp;&nbsp; procedure&nbsp;&nbsp; Add(const AObject : TPerson); reintroduce;<br>&nbsp; end;<br><br>&nbsp; TPerson = class(TtiObject)<br>&nbsp; protected<br>&nbsp;&nbsp;&nbsp; function&nbsp;&nbsp;&nbsp; GetParent: TPersonList; reintroduce;<br>&nbsp; public<br>&nbsp;&nbsp;&nbsp; property&nbsp;&nbsp;&nbsp; Parent: TPersonList read GetParent;<br>  end;<br></pre>
+In TPersonList, the Items[] property and access methods are recast to
+accept and return TPerson instances. This requires some effort upfront
+that will be rewarded when you start using the TPersonList in code.<br>
+<br>
+In TPerson, the Parent property is recast to return TPersonList. This
+makes it possible to walk up an object tree with the IDE and compiler
+helping you as much as possible along the way.<br>
+<br>
+Compile and run the unit tests.<br>
+<br>
+TPerson requires some properties so add the following to TPerson&#8217;s
+published section. (The properties must be published as we are using
+tiOPF&#8217;s Auto-map functionality for object persistence. tiOPF supports
+alternative mapping strategies that do not require properties to be
+published.<br>
+<br>
+<div style="margin-left: 40px;"><span
+ style="font-weight: bold; font-style: italic;">Side bar:</span><span
+ style="font-style: italic;"> Published properties or persistent fields?</span><br
+ style="font-style: italic;">
+<br style="font-style: italic;">
+<span style="font-style: italic;">The tiOPF allows you to model object
+data using published properties, or tiOPF&#8217;s implementation of
+persistent fields (descending from TtiField)</span><br
+ style="font-style: italic;">
+<br style="font-style: italic;">
+<span style="font-style: italic;">Using published properties is
+suitable for most applications, is simpler to code and leads to lower
+demands on memory at runtime.</span><br style="font-style: italic;">
+<br style="font-style: italic;">
+<span style="font-style: italic;">Persistent fields are required if
+null support is necessary. Persistent fields also make it possible to
+generate light weight SQL update statements by checking each field&#8217;s
+IsDirty property before generating the SQL. Persistent fields also have
+the advantage that object metadata can be modelled in a central
+location and used for data validation. (eg Not Null, Maximum field
+width, Check constraints)</span><br>
+</div>
+<br>
+Add the following properties to TPerson:<br>
+<pre><br>&nbsp; TPerson = class(TtiObject)<br>&nbsp; &#8230;<br>&nbsp; published<br>&nbsp;&nbsp;&nbsp; property Title: string read FTitle write FTitle;<br>&nbsp;&nbsp;&nbsp; property FirstName: string read FFirstName write FFirstName;<br>&nbsp;&nbsp;&nbsp; property LastName: string read FLastName write FLastName;<br>&nbsp;&nbsp;&nbsp; property Initials: string read FInitials write FInitials;<br>&nbsp; end;<br></pre>
+<br>
+TtiObject and TtiObjectList have a virtual method Read() which must be
+overridden to provide access to the persistence mechanism. We do not
+want to change the behaviour of Read() but simply raise its visibility
+from from protected to public so Read() can be called in our code. <br>
+<br>
+Add the following to TPersonList:<br>
+<pre>  TPersonList = class(TtiObjectList)<br>  &#8230;<br>  public<br>    procedure   Read; override;<br>  end;<br><br>implementation <br><br>procedure TPersonList.Read;<br>begin<br>  inherited;<br>end;<br></pre>
+Rough out the TPersonTestCase with the following code:<br>
+<pre><br>implementation<br>uses<br>  Person_BOM,<br>  TestFramework,<br>  tiDialogs;<br><br>procedure TPersonTestCase.PersonList_Read;<br>var<br>  LList: TPersonList;<br>begin<br>  LList := TPersonList.Create;<br>  try<br>    LList.Read;<br>    // tiShowString lets us confirm persistence is working, before<br>    // writing the details of the test<br>    tiShowString(LList.AsDebugString);<br>  finally<br>    LList.Free;<br>  end;<br>end;<br></pre>
+Run the unit tests and you will see the dialog shown below:<br>
+<br>
+<img style="width: 295px; height: 125px;" alt=""
+ src="Images/RougOutTheBusinessObjects_02.gif"><br>
+<br>
+This tells us we are looking at an empty TPersonList, with an
+ObjectState of posClean, and an empty OID.<br>
+<br>
+<div style="margin-left: 40px;"><span style="font-style: italic;"><span
+ style="font-weight: bold;">Side bar:</span> About ObjectState</span><br
+ style="font-style: italic;">
+<br style="font-style: italic;">
+<span style="font-style: italic;">The tiOPF supports the concept of
+ObjectState.</span><br style="font-style: italic;">
+<br style="font-style: italic;">
+<span style="font-style: italic;">An object can be in one of the
+following states:</span><br style="font-style: italic;">
+<br style="font-style: italic;">
+<span style="font-style: italic;">posEmpty&nbsp;&nbsp;&nbsp; The object
+has been created, but not filled with data from the DB</span><br
+ style="font-style: italic;">
+<span style="font-style: italic;">posPK&nbsp;&nbsp;&nbsp; The object
+has been created, it&#8217;s OID and human readable primary key info has been
+read. posCreate&nbsp;&nbsp;&nbsp; The object has been created and
+populated with data and must be saved to the DB</span><br
+ style="font-style: italic;">
+<span style="font-style: italic;">posUpdate&nbsp;&nbsp;&nbsp; The
+object has been changed, the DB must be updated</span><br
+ style="font-style: italic;">
+<span style="font-style: italic;">posDelete&nbsp;&nbsp;&nbsp; The
+object has been deleted, it must be deleted from the DB</span><br
+ style="font-style: italic;">
+<span style="font-style: italic;">posDeleted&nbsp;&nbsp;&nbsp; The
+object was marked for deletion, and has been deleted in the database</span><br
+ style="font-style: italic;">
+<span style="font-style: italic;">posClean&nbsp;&nbsp;&nbsp; The object
+is 'Clean' no DB update necessary</span><br>
+</div>
+<h2>Persisting TPerson</h2>
+To persist TPerson we must register the following relationships:<br>
+<ul>
+  <li>between TPerson and the person table in the database;</li>
+  <li>between TPerson&#8217;s properties and the fields in the database; and</li>
+  <li>between TPerson and it&#8217;s container TPersonList.<br>
+  </li>
+</ul>
+The mappings between class &amp; table, properties and fields are
+registered with the following call to ClassDBMappingMgr:<br>
+<pre><br>  GTIOPFManager.ClassDBMappingMgr.RegisterMapping(<br>    &lt;ClassName&gt;, <br>    &lt;TableName&gt;, <br>    &lt;PropertyName&gt;, <br>    &lt;Database field name&gt;, <br>    [&lt;Optional relationship info&gt;]);<br></pre>
+GTIOPFManager is the globally available, single instance of
+TtiOPFManager, which maintains a list of registered persistence layers,
+databases and mapping relationships.<br>
+<br>
+ClassDBMappingManager is a property on TtiOPFManager and it&#8217;s design is
+based on a paper by Scott Ambler.<br>
+<br>
+The first four parameters are self evident. The fifth parameter
+&lt;Optional relationship info&gt; is used to specify if a property /
+field is a database primary or foreign key.<br>
+<br>
+Object to container relationships are registered with the following
+call:<br>
+<pre><br>  GTIOPFManager.ClassDBMappingMgr.RegisterCollection(<br>    &lt;List -  TtiObjectList descendant&gt;,<br>    &lt;Item &#8211; TtiObject descendant&gt;);<br></pre>
+To see this in action, add the following code to Person.pas&#8217;s
+Initialization section:<br>
+<pre><br>implementation<br>uses<br>  tiOPFManager,<br>  tiAutoMap;<br><br>&#8230;<br><br>initialization<br>  GTIOPFManager.ClassDBMappingMgr.RegisterMapping(TPerson, 'person', 'oid',      'oid', [pktDB]);<br>  GTIOPFManager.ClassDBMappingMgr.RegisterMapping(TPerson, 'person', 'FirstName','first_name');<br>  GTIOPFManager.ClassDBMappingMgr.RegisterMapping(TPerson, 'person', 'LastName', 'last_name');<br>  GTIOPFManager.ClassDBMappingMgr.RegisterMapping(TPerson, 'person', 'Initials', 'initials');<br>  GTIOPFManager.ClassDBMappingMgr.RegisterMapping(TPerson, 'person', 'Title',    'title');<br>  GTIOPFManager.ClassDBMappingMgr.RegisterCollection(TPersonList, TPerson);<br></pre>
+Run the unit tests again and the test list will still be empty because
+we have not put any records into the database. <br>
+<br>
+<div style="text-align: left; margin-left: 40px;"><span
+ style="font-style: italic;"><span style="font-weight: bold;">Side bar:</span>
+Other mapping strategies in the tiOPF</span><br
+ style="font-style: italic;">
+<br style="font-style: italic;">
+<span style="font-style: italic;">The tiOPF supports three object &#8211;
+database mapping strategies. These are Automapping (used in this demo),
+&#8220;DB Independent visitors&#8221; and &#8220;Hard coded visitors&#8221;</span><br
+ style="font-style: italic;">
+<br style="font-style: italic;">
+<span style="font-style: italic;">The following matrix will help you
+decide which is the best for your application.</span><br
+ style="font-style: italic;">
+<br style="font-style: italic;">
+</div>
+<table
+ style="text-align: left; width: 1243px; font-style: italic; margin-left: 40px; margin-right: auto; height: 200px;"
+ border="1" cellpadding="2" cellspacing="2">
+  <tbody>
+    <tr>
+      <td style="vertical-align: top; font-weight: bold;">Feature<br>
+      </td>
+      <td style="vertical-align: top; font-weight: bold;">Automapping<br>
+      </td>
+      <td style="vertical-align: top; font-weight: bold;">DB independent<br>
+      </td>
+      <td style="vertical-align: top; font-weight: bold;">Hard coded<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">Flat files<br>
+      </td>
+      <td style="vertical-align: top;">Yes<br>
+      </td>
+      <td style="vertical-align: top;">Yes<br>
+      </td>
+      <td style="vertical-align: top;">No<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">Use stored procedures<br>
+      </td>
+      <td style="vertical-align: top;">No<br>
+      </td>
+      <td style="vertical-align: top;">No<br>
+      </td>
+      <td style="vertical-align: top;">Yes<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">Swap database easilly<br>
+      </td>
+      <td style="vertical-align: top;">Yes<br>
+      </td>
+      <td style="vertical-align: top;">Yes<br>
+      </td>
+      <td style="vertical-align: top;">Perhaps<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">Control over SQL<br>
+      </td>
+      <td style="vertical-align: top;">No<br>
+      </td>
+      <td style="vertical-align: top;">No<br>
+      </td>
+      <td style="vertical-align: top;">Complete<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">Control over performance<br>
+      </td>
+      <td style="vertical-align: top;">No<br>
+      </td>
+      <td style="vertical-align: top;">No<br>
+      </td>
+      <td style="vertical-align: top;">Complete<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">Learning curve<br>
+      </td>
+      <td style="vertical-align: top;">Easy<br>
+      </td>
+      <td style="vertical-align: top;">Moderate<br>
+      </td>
+      <td style="vertical-align: top;">Hard<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
+<h2>Testing TPerson.Read</h2>
+We can insert a record by running some SQL as part of the unit test.
+This can be done via a call to GTIOPFManager.ExecSQL().<br>
+<br>
+Add the following code to the unit test:<br>
+<pre><br>procedure TPersonTestCase.PersonList_Read;<br>var<br>  LList: TPersonList;<br>begin<br>  GTIOPFManager.ExecSQL(<br>    'insert into person ' +<br>    '(OID, FIRST_NAME, LAST_NAME, TITLE) ' +<br>    'values ' +<br>    '(''1000'', ''Edna'', ''Everage'', ''Dame'') ');<br><br>  LList := TPersonList.Create;<br>  try<br>    LList.Read;<br>    tiShowString(LList.AsDebugString)<br>  finally<br>    LList.Free;<br>  end;<br>end;<br><br></pre>
+Run the unit tests again and you will see a single object has been
+added to the list:<br>
+<br>
+<img style="width: 345px; height: 156px;" alt=""
+ src="Images/TestingTPersonRead_01.gif"><br>
+<br>
+All that remains is to add some calls to CheckEquals() to
+confirm the object&#8217;s data has been read correctly<span
+ style="font-family: &quot;Garamond&quot;,&quot;serif&quot;;">..<br>
+<br>
+</span><span style="font-size: 12pt; font-family: &quot;Garamond&quot;,&quot;serif&quot;;">Add
+the following
+code to the unit test:</span><br>
+<pre>  LList := TPersonList.Create;<br>  try<br>    LList.Read;<br>    CheckEquals(1, LList.Count);<br>    CheckEquals('1000', LList.Items[0].OID.AsString);<br>    CheckEquals('Edna', LList.Items[0].FirstName);<br>    CheckEquals('Everage', LList.Items[0].LastName);<br>    CheckEquals('Dame', LList.Items[0].Title);<br>  finally<br>    LList.Free;<br>  end;<br><br></pre>
+This checks there is exactly one object returned from the database, and
+confirms it&#8217;s properties have been set as expected.<br>
+<br>
+But, there is a problem running the test multiple times as the SQL
+Insert will fail with a unique key violation. The solution is to empty
+all tables in the database before the test is run. This is done with a
+call to GTIOPFManager.DeleteRow() as shown below:<br>
+<pre>procedure TPersonTestCase.PersonList_Read;<br>var<br>  LList: TPersonList;<br>begin<br>  GTIOPFManager.DeleteRow('person', nil);<br><br>  GTIOPFManager.ExecSQL(<br>    'insert into person ' +<br>    '(OID, FIRST_NAME, LAST_NAME, TITLE) ' +<br>    'values ' +<br>    '(''1000'', ''Edna'', ''Everage'', ''Dame'') ');<br><br></pre>
+DeleteRow takes two parameters: <br>
+<br>
+GTIOPFManager.DeleteRow(&lt;Table Name&gt;, &lt;Query Parameters&gt;);<br>
+<br>
+The meaning of table name is self evident. &lt;Query Parameters&gt;, if
+assigned will be a TtiQueryParams objects that contains a list of
+&#8216;Field Name&#8217; &#8211; &#8216;Value pairs&#8217; what are used to build a SQL WHERE clause.<br>
+<br>
+We have unit tested basic TPersonList.Read() functionality, but the
+code we have written will be hard to maintain as the application grows
+because:<br>
+<br>
+<ul>
+  <li>TPerson&#8217;s is inserted into the database with SQL containing
+embedded values. These values are hard to keep synchronised with the
+values tested in the CheckEquals() calls.</li>
+  <li>This technique limits us to testing against SQL databases.</li>
+</ul>
+<h2>Testing TPerson.Save (Create a new instance)</h2>
+To test TPerson.Save() we create a new TPerson, populate it&#8217;s
+properties then call Save(). We then call TPersonList.Read and check
+the TPerson has been read correctly. This tests assumes that
+TPerson.Read() is working correctly, which is why we wrote the test for
+TPerson.Read() first.<br>
+<br>
+Rough out the unit tests shown below using copy &amp; paste to clone
+the code that was written to test TPerson.Read() (Don&#8217;t worry, we will
+refactor this cloned code later.)<br>
+<pre><br>procedure TPersonTestCase.PersonList_Create;<br>var<br>  LList: TPersonList;<br>  LItem: TPerson;<br>begin<br>  GTIOPFManager.DeleteRow('person', nil);<br><br>  LItem:= TPerson.Create;<br>  try<br>    LItem.OID.AsString:= '1000';<br>    LItem.FirstName:= 'Edna';<br>    LItem.LastName:= 'Everage';<br>    LItem.Title:= 'Dame';<br>    LItem.Dirty:= True;  // &lt;&lt;== Tell the OPF this object is to be saved<br>    LItem.Save;<br>  finally<br>    LItem.Free;<br>  end;<br><br>  LList := TPersonList.Create;<br>  try<br>    LList.Read;<br>    CheckEquals(1, LList.Count);<br>    CheckEquals('1000', LList.Items[0].OID.AsString);<br>    CheckEquals('Edna', LList.Items[0].FirstName);<br>    CheckEquals('Everage', LList.Items[0].LastName);<br>    CheckEquals('Dame', LList.Items[0].Title);<br>  finally<br>    LList.Free;<br>  end;<br><br>end;<br><br></pre>
+Compile and run the unit tests.<br>
+<br>
+Looking at PersonList_Read and PersonList_Create, the calls to
+DeleteRow() and CheckEquals() are candidates for abstraction. The code
+that creates and populates an instance of TPerson will be used when
+testing update and delete so we shall abstract that as well.<br>
+<h2>Abstracting object &amp; database setup code</h2>
+For each class, there are actually four method we require to simplify
+unit testing. For the TPerson class we shall call these:<br>
+<br>
+PersonAssign:&nbsp;&nbsp;&nbsp; Assigns seed data to a person,
+populating all fields;<br>
+PersonCreate:&nbsp;&nbsp;&nbsp; Creates an instance of TPerson, then
+calls PersonAssign();<br>
+PersonInsert:&nbsp; &nbsp;&nbsp;&nbsp; Calls PersonCreate, then inserts
+into the database;<br>
+PersonCheck:&nbsp;&nbsp;&nbsp; Calls PersonCreate to create a reference
+then checks against a test instance.<br>
+<h3>Create the TPersonSetup class</h3>
+A large application will probably have hundreds of classes that are
+persisted. With each class needing at least four setup methods the test
+code can quickly become unwieldy so we group the setup methods into
+related families. The abstract class TtiTestSetup is used as a starting
+point.<br>
+<br>
+Add the following code to Person_TST.pas:<br>
+<pre>interface<br>uses<br>  tiTestFramework,<br>  tiTestSetup,<br>  Person_BOM;<br><br>type<br><br>  TPersonSetup = class(TtiTestSetup)<br>  public<br>    procedure PersonAssign(const APerson: TPerson; const AOID: string);<br>    function  PersonCreate(const AOID: string): TPerson;<br>    procedure PersonInsert(const AOID: string);<br>    procedure PersonCheck(const APerson: TPerson; const AOID: string);<br>  end;<br><br>  TPersonTestCase = class(TtiTestCase)<br>  private<br>    FPersonSetup: TPersonSetup;<br>  protected<br>    procedure SetupOnce; override;    // &lt;&lt;== SetUpOnce, new to DUnit2 will<br>    procedure TearDownOnce; override; //&lt;&lt;==  be called once for each test run.<br><br>&#8230;<br><br>procedure TPersonTestCase.SetupOnce;<br>begin<br>  inherited;<br>  FPersonSetup:= TPersonSetup.Create(Self);<br>end;<br><br>procedure TPersonTestCase.TearDownOnce;<br>begin<br>  FPersonSetup.Free;<br>  inherited;<br>end;<br></pre>
+The TPersonTestCase owns an instance of TPersonSetup. In a larger
+application, TPersonSetup may be owned by an abstract TMyAppTestCase,
+or it may be added to each TestCase as required.<br>
+<h3>Implement PersonAssign()</h3>
+PersonAssign takes an empty instance of TPerson and sets all its
+properties to unique values based on AOID. This is done as follows:<br>
+<pre><br>procedure TPersonSetup.PersonAssign(const APerson: TPerson; const AOID: string);<br>begin<br>  APerson.FirstName:= tvToStr(AOID, 1);<br>  APerson.LastName:= tvToStr(AOID, 2);<br>  APerson.Title:= tvToStr(AOID, 3);<br>  APerson.Initials:= tvToStr(AOID, 4);<br>end;<br><br></pre>
+tvToStr() will &#8216;Increment&#8217; AOID so each property of TPerson is assigned
+a unique value. These properties will be meaningless strings based on
+the value of AOID, but they will be unique which will test our
+persistence code does not cross wire any mappings between fields and
+the database.<br>
+<br>
+PersonAssign() does not set the TPerson&#8217;s OID as PersonAssign() will be
+used to test updates. For this test, OID must remain unchanged.<br>
+<h3><span style="font-size: 12pt; font-family: &quot;Garamond&quot;,&quot;serif&quot;;">Implement
+PersonCreate()</span></h3>
+PersonCreate() takes a seed value and returns a populated instance of
+TPerson as shown in the code below:<br>
+<pre><br>function TPersonSetup.PersonCreate(const AOID: string): TPerson;<br>begin<br>  result:= TPerson.Create;<br>  result.OID:= AOID;<br>  PersonAssign(result, AOID);<br>end;<br></pre>
+Note that the OID is set in PersonCreate()<br>
+<h3>Implement PersonInsert()</h3>
+PersonInsert() takes a seed value, creates a TPerson, saves it to the
+database using a tiOPF technique that works for both SQL and non SQL
+database as shown in the code below:<br>
+<pre>procedure TPersonSetup.PersonInsert(const AOID: string);<br>var<br>  LPerson: TPerson;<br>  LParams: TtiQueryParams;<br>begin<br>  LPerson:= nil;<br>  LParams:= nil;<br>  try<br>    LPerson:= PersonCreate(AOID);<br>    LParams:= TtiQueryParams.Create;<br>    LParams.SetValueAsString('oid', LPerson.OID.AsString);<br>    LParams.SetValueAsString('first_name', LPerson.FirstName);<br>    LParams.SetValueAsString('last_name', LPerson.LastName);<br>    LParams.SetValueAsString('title', LPerson.Title);<br>    LParams.SetValueAsString('initials', LPerson.Initials);<br>    GTIOPFManager.InsertRow('person', LParams);<br>  finally<br>    LPerson.Free;<br>    LParams.Free;<br>  end;<br>end;<br></pre>
+PersonCreate() is used to seed a fresh instance of TPerson.<br>
+<br>
+TtiQueryParams is populated with field name &#8211; value pairs and is passed
+to GTIOPFManger.InsertRow(), along with the table name to insert the
+record. This technique will work with both SQL and non SQL databases.<br>
+<br>
+<div style="margin-left: 40px;"><span
+ style="font-weight: bold; font-style: italic;">Sidebar: </span><span
+ style="font-style: italic;">TtiCriteria</span><br
+ style="font-style: italic;">
+<br style="font-style: italic;">
+<span style="font-style: italic;">TtiQueryParams supports the
+construction of simple insert, update and delete statements where each
+parameter equals a single value. For queries requiring more complex
+operators like AND, OR, NOT EQUALS, GREATER THAN, the TtiCriteria
+classes should be used.</span><br>
+<br>
+</div>
+PersonCheck() takes an instance of TPerson and a seed value. A
+reference instance of TPerson is created and is used in calls to
+CheckEquals(). This is shown in the code below:<br>
+<pre><br>procedure TPersonSetup.PersonCheck(const APerson: TPerson; const AOID: string);<br>var<br>  LPerson: TPerson;<br>begin<br>    LPerson:= PersonCreate(AOID);<br>  try<br>    TC.CheckEquals(LPerson.FirstName, APerson.FirstName);<br>    TC.CheckEquals(LPerson.LastName, APerson.LastName);<br>    TC.CheckEquals(LPerson.Title, APerson.Title);<br>    TC.CheckEquals(LPerson.Initials, APerson.Initials);<br>  finally<br>    LPerson.Free;<br>  end;<br>end;<br></pre>
+The CheckEquals() methods are being called from within a
+TtiTestCaseSetup descendent, so must be made by the referenced TC
+(TestCase)<br>
+<br>
+OID is not checked as there will be cases when OID is deliberately out
+of sync with the seed value. OIDs are checked in the individual test
+methods.<br>
+<h2>Refactoring the Person_Read and Person_Create tests</h2>
+We can now tidy up the tests for Person_Read and Person_Create.<br>
+<br>
+The code that trashes the database can be moved to the TestCase&#8217;s SetUp
+method. While we are about it, we shall extend this code to empty all
+tables as shown below:<br>
+<pre><br>procedure TPersonTestCase.SetUp;<br>begin<br>  inherited;<br>  GTIOPFManager.DeleteRow('person', nil);<br>  GTIOPFManager.DeleteRow('adrs', nil);<br>  GTIOPFManager.DeleteRow('eadrs', nil);<br>  GTIOPFManager.DeleteRow('adrs_type', nil);<br>  GTIOPFManager.DeleteRow('eadrs_type', nil);<br>end;<br></pre>
+Person_Read can be modified to reference the PersonSetup methods as
+shown in the code below:<br>
+<pre><br>procedure TPersonTestCase.PersonList_Read;<br>var<br>  LList: TPersonList;<br>begin<br>  PersonSetup.PersonInsert(COIDPerson1);<br>  LList := TPersonList.Create;<br>  try<br>    LList.Read;<br>    CheckEquals(1, LList.Count);<br>    PersonSetup.PersonCheck(LList.Items[0], COIDPerson1);<br>    CheckEquals(COIDPerson1, LList.Items[0]);<br>  finally<br>    LList.Free;<br>  end;<br>end;<br></pre>
+And now Person_Create can be tidied up:<br>
+<pre><br>procedure TPersonTestCase.PersonList_Create;<br>var<br>  LList: TPersonList;<br>  LItem: TPerson;<br>begin<br>  LItem:= PersonSetup.PersonCreate(COIDPerson1);<br>  try<br>    LItem.Dirty:= True;<br>    LItem.Save;<br>  finally<br>    LItem.Free;<br>  end;<br><br>  LList := TPersonList.Create;<br>  try<br>    LList.Read;<br>    PersonSetup.PersonCheck(LList.Items[0], COIDPerson1);<br>    CheckEquals(COIDPerson1, LList.Items[0]);<br>  finally<br>    LList.Free;<br>  end;<br>end;<br></pre>
+<h2>Testing TPerson.Save (Update an existing instance)</h2>
+To test updating a TPerson, we must:<br>
+<ul>
+  <li>Insert a Person into the database;</li>
+  <li>Read it back;</li>
+  <li>Update it;</li>
+  <li>Save it;</li>
+  <li>Read it back again; then</li>
+  <li>Check it&#8217;s values have been correctly updated.</li>
+</ul>
+This is shown in the code below:<br>
+<pre>procedure TPersonTestCase.Person_Update;<br>var<br>  LList: TPersonList;<br>begin<br>  PersonSetup.PersonInsert(COIDPerson1); // &lt;&lt;== Insert Person #1<br>  LList := TPersonList.Create;<br>  try<br>    LList.Read;<br>    PersonSetup.PersonCheck(LList.Items[0], COIDPerson1);// &lt;&lt;== Check it's Person #1<br>    PersonSetup.PersonAssign(LList.Items[0], COIDPerson2);// &lt;&lt;== Assign to Person #2<br>    LList.Items[0].Dirty:= True;<br>    LList.Items[0].Save;<br>  finally<br>    LList.Free;<br>  end;<br><br>  LList := TPersonList.Create;<br>  try<br>    LList.Read;<br>    PersonSetup.PersonCheck(LList.Items[0], COIDPerson2); // &lt;&lt;== Check it's Person #2<br>  finally<br>    LList.Free;<br>  end;<br>end;<br></pre>
+<h2>Testing TPerson.Save (Delete an existing instance)</h2>
+To test deleting a TPerson, we must:<br>
+<ul>
+  <li>Insert a Person into the database;</li>
+  <li>Read it back;</li>
+  <li>Mark it for deletion;</li>
+  <li>Save it; then</li>
+  <li>Attempt to read it back again, and if all goes well, it won&#8217;t be
+there.<br>
+  </li>
+</ul>
+This is show in the code below:<br>
+<pre>procedure TPersonTestCase.Person_Delete;<br>var<br>  LList: TPersonList;<br>begin<br>  PersonSetup.PersonInsert(COIDPerson1);<br>  LList := TPersonList.Create;<br>  try<br>    LList.Read;<br>    LList.Items[0].Deleted:= True; // &lt;&lt;== This object is to be deleted<br>    LList.Items[0].Save;<br>  finally<br>    LList.Free;<br>  end;<br><br>  LList := TPersonList.Create;<br>  try<br>    LList.Read;<br>    CheckEquals(0, LList.Count); //&lt;&lt;== Should have been deleted<br>  finally<br>    LList.Free;<br>  end;<br>end;<br></pre>
+<div style="margin-left: 40px;"><span style="font-style: italic;"><span
+ style="font-weight: bold;">Sidebar:</span> About OIDs</span><br
+ style="font-style: italic;">
+<br style="font-style: italic;">
+<span style="font-style: italic;">Each persisted object is uniquely
+identified by an OID (Object ID)</span><br style="font-style: italic;">
+<br style="font-style: italic;">
+<span style="font-style: italic;">You can also use tiOPF against
+&#8216;legacy&#8217; database that do not implement the concept of OID.</span><br
+ style="font-style: italic;">
+<br style="font-style: italic;">
+<span style="font-style: italic;">By default, tiOPF uses GUIDS for OID,
+but a number of other strategies including Scott Amblers High / Low
+integers, Hex and database sequence generators are available.</span><br
+ style="font-style: italic;">
+<br style="font-style: italic;">
+<span style="font-style: italic;">The OID strategy is set by assigning
+GTIOPFManager.OIDGenerator.</span><br style="font-style: italic;">
+<br style="font-style: italic;">
+<span style="font-style: italic;">Alternative OID generators can be
+found in the Options directory</span>.<br>
+</div>
+<h2>Adding a VCL Forms (modal) user interface</h2>
+If you have read <a
+ href="http://www.amazon.com/About-Face-Essentials-Interaction-Design/dp/0470084111">About
+Face</a>, then you will be familiar with the potential evils of modal
+user interfaces. They are, however very easy to code so we shall start
+with an interface based on popup forms.<br>
+<h3>Rough out the application</h3>
+Create a new VCLForms application and save it to AdrsBook\GUI under the
+name AdrsBookGUIModalForms.<br>
+<br>
+Save it&#8217;s main form as FMain.pas<br>
+<br>
+In Project | Options, set<br>
+<br>
+<div style="margin-left: 40px;">output directory to&nbsp;&nbsp;&nbsp;
+&nbsp;..\_bin;<br>
+Unit output directory to _dcu;<br>
+Search Path to &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; ..\BOM;<br>
+</div>
+<br>
+In FMain.pas&#8217;s uses clause, add tiQueryIBX to force linking of the IBX
+persistence layer.<br>
+<br>
+In FormMain&#8217;s FormCreate event, add a call to
+GTIOPFManager.ConnectDatabase()<br>
+<br>
+Create an instance of TPersonList owned by TFormMain and call it&#8217;s Read
+method in FormMain&#8217;s FormCreate event.<br>
+<br>
+When this is done, FMain.pas will look like this:<br>
+<br>
+<pre>unit FMain;</pre>
+<pre>interface</pre>
+<pre>uses</pre>
+<pre>&nbsp; Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,<br>  Dialogs, Person_BOM;</pre>
+<pre>type</pre>
+<pre>&nbsp; TFormMain = class(TForm)<br>&nbsp;&nbsp;&nbsp; procedure FormCreate(Sender: TObject); <br> &nbsp;&nbsp; procedure FormDestroy(Sender: TObject);<br>&nbsp; private<br>&nbsp;&nbsp;&nbsp; FPersonList: TPersonList;<br>&nbsp; public<br>&nbsp;&nbsp;&nbsp; { Public declarations }<br>&nbsp; end;</pre>
+<pre>var</pre>
+<pre>&nbsp; FormMain: TFormMain;</pre>
+<pre>implementation</pre>
+<pre>uses<br>&nbsp; tiOPFManager,<br>&nbsp; tiQueryIBX;</pre>
+<pre>{$R *.dfm}</pre>
+<pre>procedure TFormMain.FormCreate(Sender: TObject);<br>begin<br>&nbsp; GTIOPFManager.ConnectDatabase('adrs', 'adrs.fdb', 'SYSDBA', 'masterkey', '', '');<br>&nbsp; FPersonList:= TPersonList.Create;<br>&nbsp; FPersonList.Read;<br>end;</pre>
+<pre>procedure TFormMain.FormDestroy(Sender: TObject);<br>begin<br>&nbsp; FPersonList.Free;<br>end;</pre>
+<h3>The main form &#8211; a TVirtualTreeView of TPeople</h3>
+We shall use the TtiVTListView to display a list of TPeople. The
+TtiVTListView is a wrapper around the TVirtualTree that makes it easy
+to use with the tiOPF.<br>
+<br>
+Add a TtiVTListView to FormMain and set it&#8217;s align property to
+alClient. In FormMain&#8217;s FormCreate event, add the following code to
+setup the relationship between the list view columns and TPerson&#8217;s
+properties:<br>
+<br>
+Set the TtiVTListView&#8217;s data property to FPersonList as shown in the
+code below:<br>
+<br>
+<pre>procedure TFormMain.FormCreate(Sender: TObject);</pre>
+<pre>begin<br>&nbsp; GTIOPFManager.ConnectDatabase('adrs', 'adrs.fdb', 'SYSDBA', 'masterkey', '', '');<br>&nbsp; FPersonList:= TPersonList.Create;<br>&nbsp; FPersonList.Read;</pre>
+<pre>&nbsp; LV.AddColumn('Title', vttkString, 'Title', 100);<br>&nbsp; LV.AddColumn('FirstName', vttkString, 'First Name', 200);<br>&nbsp; LV.AddColumn('LastName', vttkString, 'Last Name', 200);<br>&nbsp; LV.Data:= FPersonList;<br>end;</pre>
+<p class="MsoNormal">Set the TtiVTListView&#8217;s VisibleButtons property to
+[tiLVBtnVisEdit,tiLVBtnVisNew,tiLVBtnVisDelete]
+These buttons provide a quick path to coding a popup modal form:</p>
+<span style="font-size: 12pt; font-family: &quot;Garamond&quot;,&quot;serif&quot;;"><!--[if gte vml 1]><v:shapetype
+ id="_x0000_t75" coordsize="21600,21600" o:spt="75" o:preferrelative="t"
+ path="m@4@5l@4@11@9@11@9@5xe" filled="f" stroked="f">
+ <v:stroke joinstyle="miter"/>
+ <v:formulas>
+  <v:f eqn="if lineDrawn pixelLineWidth 0"/>
+  <v:f eqn="sum @0 1 0"/>
+  <v:f eqn="sum 0 0 @1"/>
+  <v:f eqn="prod @2 1 2"/>
+  <v:f eqn="prod @3 21600 pixelWidth"/>
+  <v:f eqn="prod @3 21600 pixelHeight"/>
+  <v:f eqn="sum @0 0 1"/>
+  <v:f eqn="prod @6 1 2"/>
+  <v:f eqn="prod @7 21600 pixelWidth"/>
+  <v:f eqn="sum @8 21600 0"/>
+  <v:f eqn="prod @7 21600 pixelHeight"/>
+  <v:f eqn="sum @10 21600 0"/>
+ </v:formulas>
+ <v:path o:extrusionok="f" gradientshapeok="t" o:connecttype="rect"/>
+ <o:lock v:ext="edit" aspectratio="t"/>
+</v:shapetype><v:shape id="_x0000_i1025" type="#_x0000_t75" style='width:139.5pt;
+ height:42pt'>
+ <v:imagedata src="file:///C:\Temp\msohtmlclip1\01\clip_image001.png" o:title=""/>
+</v:shape><![endif]--><!--[if !vml]--><!--[endif]--></span><span
+ style="font-family: &quot;Garamond&quot;,&quot;serif&quot;;"><img
+ style="width: 186px; height: 56px;" alt=""
+ src="Images/TVirtualTreeViewOfTPeople.gif"><br>
+<br>
+Double click on the ListView&#8217;s OnItemInsert, OnItemEdit and
+OnItemDelete events to create a place holder for some code.<br>
+<br>
+In OnItemInsert, add the following test code:</span><br>
+<pre>procedure TFormMain.LVItemInsert(<br>  pVT: TtiCustomVirtualTree; AData: TtiObject; AItem: PVirtualNode);<br>var<br>&nbsp; LData: TPerson;<br>begin<br>&nbsp; LData:= TPerson.CreateNew; <br>&nbsp; FPersonList.Add(LData);<br>&nbsp; LData.LastName:= 'test';<br>&nbsp; LData.FirstName:= 'test';<br>&nbsp; LData.Save;<br>&nbsp; LV.Refresh(LData);<br>end;</pre>
+In OnItemDelete, add the following code:<br>
+<pre>procedure TFormMain.LVItemDelete(<br>  pVT: TtiCustomVirtualTree; AData: TtiObject; AItem: PVirtualNode);\<br>begin<br>&nbsp; if tiObjectConfirmDelete(AData) then // Add tiGUIUtils to the uses<br>&nbsp; begin<br>&nbsp;&nbsp;&nbsp; AData.Deleted:= True;<br>&nbsp;&nbsp;&nbsp; (AData as TPerson).Save;<br>&nbsp;&nbsp;&nbsp; FPersonList.FreeDeleted;<br>&nbsp;&nbsp;&nbsp; LV.Refresh;<br>&nbsp; end;<br>end;</pre>
+Compile and run the application and test Insert and Delete work.<br>
+<br>
+The next step is to write a form for editing a TPerson.<br>
+<h3>The TPerson Edit form</h3>
+We shall use TFormTIPerEditDialog as the parent for our edit form.
+TFormTIPerEditDialog can be found in \tiOPF2\GUI\FtiPerEditDialog.pas
+so add it to the project&#8217;s DPR.<br>
+<br>
+Create a form called FormPersonEdit that descends from
+TFormTIPerEditDialog and save it to FPersonEdit.pas<br>
+<br>
+Add four TtiPerAwareEdit controls to the form, an TLabel and arrange
+them as shown (Set the TLabel&#8217;s AutoSize property to false, it&#8217;s
+Transparent property to false and it&#8217;s colour property to something
+ghastly for displaying error messages.<br>
+<br>
+<img style="width: 360px; height: 274px;" alt=""
+ src="Images/TheTPersonEditForm.gif"><br>
+<br>
+Override the form&#8217;s SetData() and IsValid() methods. The implementation
+of SetData() is shown below:<br>
+<br>
+<pre>procedure TFormPersonEdit.SetData(const AValue: TtiObject);<br>begin<br>&nbsp; inherited;<br>&nbsp; paeTitle.LinkToData(DataBuffer, 'Title');<br>&nbsp; paeFirstName.LinkToData(DataBuffer, 'FirstName');<br>&nbsp; paeLastName.LinkToData(DataBuffer, 'LastName');<br>end;</pre>
+Inherited is called so TFormTIPerEditDialog .SetData() can clone the
+instance being edited. The cloned copy is edited and compared against
+the copy that has been passed. This is used to provide basic undo
+functionality, as well as enable / disable the OK button. The data
+instance that was passed to the form&#8217;s Execute method can be accessed
+via the Data property. The cloned instance can be accessed via the
+DataBuffer property.<br>
+<br>
+The implementation of FormIsValid() is shown below:<br>
+<pre>function TFormPersonEdit.FormIsValid: boolean;<br>var<br>&nbsp; LS: string;<br>begin<br>&nbsp; result:= DataBuffer.IsValid(LS);<br>&nbsp; lblErrors.Caption:= LS;<br>&nbsp; lblErrors.Visible:= LS &lt;&gt; '';<br>end;</pre>
+FormIsValid depends on some functionality in TPerson.IsValid that we
+have not yet implemented.<br>
+<h3>Implement TPerson&#8217;s IsValid, GetCaption. Test Assign &amp; Equals</h3>
+To finish up, we need to implement and unit test four remaining methods
+on TPerson:<br>
+<ul>
+  <li>IsValid;</li>
+  <li>GetCaption;</li>
+  <li>Assign; and</li>
+  <li>Equals</li>
+</ul>
+<h4>TPerson.IsValid</h4>
+IsValid is where TPerson validation code resides. Adding this code to
+the business object rather than the form makes unit testing simple.
+This also makes it possible to edit TPerson objects from a number of
+locations as the validation logic is centralised.<br>
+<br>
+The code for TPerson.IsValid is shown below:<br>
+<br>
+<pre>function TPerson.IsValid(const AErrors: TtiObjectErrors): boolean;<br>begin<br>&nbsp; result:= inherited IsValid(AErrors);<br>&nbsp; if (FirstName = '') and (LastName = '') then<br>&nbsp;&nbsp;&nbsp; AErrors.AddError(CErrorPersonNameNotAssigned);<br>&nbsp; // ToDo: Add code to check field lengths will fit in the DB<br>&nbsp; result:= AErrors.Count = 0;<br>end;</pre>
+With IsValid implemented, the edit form will show an error message, and
+disable the OK button as shown below:<br>
+<br>
+<img style="width: 343px; height: 243px;" alt=""
+ src="Images/TPersonIsValid.gif"><br>
+Unit testing IsValid on complex objects can be tricky as all
+combinations of inputs must be tested. The code for testing
+TPerson.IsValid is shown below:<br>
+<br>
+procedure TPersonTestCase.Person_IsValid;<br>
+<pre>var<br>&nbsp; LItem: TPerson;<br>&nbsp; LErrors: TtiObjectErrors;<br>begin<br>&nbsp; LErrors:= nil;<br>&nbsp; LItem:= nil;<br>&nbsp; try<br>&nbsp;&nbsp;&nbsp; LErrors:= TtiObjectErrors.Create;</pre>
+<pre>&nbsp;&nbsp;&nbsp; LItem:= PersonSetup.PersonCreate(cOIDPerson1);<br>&nbsp;&nbsp;&nbsp; Check(LItem.IsValid(LErrors));<br>&nbsp;&nbsp;&nbsp; CheckEquals(0, LErrors.Count);</pre>
+<pre>&nbsp;&nbsp;&nbsp; LItem.Title:= '';<br>&nbsp;&nbsp;&nbsp; Check(LItem.IsValid(LErrors));<br>&nbsp;&nbsp;&nbsp; CheckEquals(0, LErrors.Count);</pre>
+<pre>&nbsp;&nbsp;&nbsp; LItem.Initials:= '';<br>&nbsp;&nbsp;&nbsp; Check(LItem.IsValid(LErrors));<br>&nbsp;&nbsp;&nbsp; CheckEquals(0, LErrors.Count);</pre>
+<pre>&nbsp;&nbsp;&nbsp; LItem.FirstName:= '';<br>&nbsp;&nbsp;&nbsp; Check(LItem.IsValid(LErrors));<br>&nbsp;&nbsp;&nbsp; CheckEquals(0, LErrors.Count);</pre>
+<pre>&nbsp;&nbsp;&nbsp; LItem.LastName:= '';<br>&nbsp;&nbsp;&nbsp; Check(not LItem.IsValid(LErrors));<br>&nbsp;&nbsp;&nbsp; CheckEquals(1, LErrors.Count);<br>&nbsp;&nbsp;&nbsp; CheckEquals(CErrorPersonNameNotAssigned, LErrors.Items[0].ErrorMessage);<br>&nbsp; finally<br>&nbsp;&nbsp;&nbsp; LErrors.Free;<br>&nbsp;&nbsp;&nbsp; LItem.Free;<br>&nbsp; end;<br>end;</pre>
+<h4>TPerson.GetCaption</h4>
+When you delete a TPerson, you are prompted with the following
+confirmation dialog:<br>
+<br>
+<img style="width: 293px; height: 129px;" alt=""
+ src="Images/TPersonGetCaption.gif"><br>
+<br>
+To create a more friendly message, you need to implement
+TPerson.GetCaption as shown below:<br>
+<br>
+function TPerson.GetCaption: string;<span
+ style="font-family: monospace;"><br>
+</span>begin<br>
+<pre>&nbsp; result:= Title;<br>&nbsp; if FirstName &lt;&gt; '' then<br>&nbsp;&nbsp;&nbsp; result:= result + ' ' + FirstName;<br>&nbsp; if LastName &lt;&gt; '' then<br>&nbsp;&nbsp;&nbsp; result:= result + ' ' + LastName;<br>end;</pre>
+GetCaption must also be unit tested (which is trivial so not shown
+here).<br>
+<h4>TPerson.Equals</h4>
+The edit dialog uses TtiObject.Equals() to compare two objects and if
+they are found to be different, the OK button is enabled. Unit testing
+Equals can be complex with large object hierarchies. The basics of
+testing Equals() is shown below:<br>
+<pre>procedure TPersonTestCase.Person_Equals;<br>var<span
+ style="font-family: monospace;"></span><br>&nbsp; LItem1: TPerson;<br>&nbsp; LItem2: TPerson;<br>begin<br>&nbsp; LItem1:= nil;<br>&nbsp; LItem2:= nil;<br>&nbsp; try<br>&nbsp;&nbsp;&nbsp; LItem1:= PersonSetup.PersonCreate(COIDPerson1);<br>&nbsp;&nbsp;&nbsp; LItem2:= PersonSetup.PersonCreate(COIDPerson1);<br>&nbsp;&nbsp;&nbsp; TestTIObjectEquals(LItem1, LItem2, 'LastName');<br>&nbsp;&nbsp;&nbsp; TestTIObjectEquals(LItem1, LItem2, 'FirstName');<br>&nbsp;&nbsp;&nbsp; TestTIObjectEquals(LItem1, LItem2, 'Title');<br>&nbsp;&nbsp;&nbsp; TestTIObjectEquals(LItem1, LItem2, 'Initials');<br>&nbsp; finally<br>&nbsp;&nbsp;&nbsp; LItem1.Free;<br>&nbsp;&nbsp;&nbsp; LItem2.Free;<br>&nbsp; end;<br>end;</pre>
+TestTIObjectEquals is implemented in TtiTestCase and is used to test
+Equals by changing one property at the time as shown in the following
+code fragment:<br>
+<span style="font-family: monospace;"><br>
+</span>
+<pre><span style="font-family: monospace;"></span>procedure TtiTestCase.TestTIObjectEquals(</pre>
+<pre>  const AObj1, AObj2: TtiObject; const APropName: String);<br>var<br>&nbsp; LSavedStr: string;<br>begin<br>&nbsp; Check(AObj1.Equals(AObj2), 'Expected equality');<br>&nbsp; LSavedStr:= AObj2.PropValue[APropName];<br>&nbsp; AObj2.PropValue[APropName]:= AObj2.PropValue[APropName] + 'A';<br>&nbsp; Check(not AObj1.Equals(AObj2), 'Expected inequality');<br>&nbsp; AObj2.PropValue[APropName]:=LSavedStr;<br>&nbsp; Check(AObj1.Equals(AObj2), 'Expected equality');<br>end;</pre>
+<h4>TPerson.Assign</h4>
+The edit dialog uses TtiObject.Assign() to make a copy of the object
+before editing. Assign is called again when the object is to be saved.
+Testing of Assign() assumes Equals() has been thoroughly tested and is
+illustrated in the code below:<br>
+<pre>procedure TTestPerson.Person_Assign;<br>var<br>&nbsp; LFrom: TPerson;<br>&nbsp; LTo&nbsp; : TPerson;<br>begin<br>&nbsp; LFrom:= PersonSetup.PersonCreate(COIDPerson1);</pre>
+<pre>&nbsp; try<br>&nbsp;&nbsp;&nbsp; LTo:= TPerson.Create;<br>&nbsp;&nbsp;&nbsp; try<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; LTo.Assign(LFrom);<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; PersonSetup.PersonCheck(LTo, COIDPerson1);<br>&nbsp;&nbsp;&nbsp; finally<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; LTo.Free;<br>&nbsp;&nbsp;&nbsp; end;<br>&nbsp; finally<br>&nbsp;&nbsp;&nbsp; LFrom.Free;<br>&nbsp; end;<br>end;</pre>
+<h2>Conclusion</h2>
+This paper is part one of four and has covered the basics of using
+tiOPF to persist and unit test a simple collection of objects.<br>
+<br>
+Part II will cover persisting and unit testing owned objects (the
+TPerson&#8217;s addresses and e-addresses) as well as association objects
+(TAddress is associated to a TAddressType) (This paper has not been
+written yet.)<br>
+<br>
+Part III will explain how to modify the application to persist to XML
+or over the internet via the tiOPF application server using port #80,
+HTTP &amp; XML. (This paper has not been written yet.)<br>
+<br>
+Part IV will conclude by showing how the unit test, build, install and
+deployment process is automated with FinalBuilder &amp; InnoSetup.
+(This paper has not been written yet.)<br>
+<br>
+You are welcome to discuss this paper on the tiOPF news group <a
+ href="http://tiopf.sourceforge.net/Support.shtml">here</a>.<br>
+<br>
+</body>
+</html>

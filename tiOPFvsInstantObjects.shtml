@@ -1,0 +1,123 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>tiOPF vs InstantObjects</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+
+<h1>tiOPF vs InstantObjects<br>
+Dated: 2003-10-05</h1>
+
+<h2>This is an extract from a conversation on the tiOPF mailing list:</h2>
+<p><b><i>I would be interested knowing why you want to convert your application from IO to tiOPF?</i></b></p>
+<p>There are quite a few reasons why we want to convert. These are personal views and it is not my intention to slag Instant Objects off. There are lots of good things about Instant Objects and I am sure that for many people it is an excellent way to develop applications in an OO way.</p>
+<p>Here are some of my reasons for wishing to move away.</p>
+<p>I have a requirement to develop an application which handles text translations for many different languages. In order to provide proper storage of different languages I need to use 2 or 4 byte character sets. Instant Objects can only work with single byte character sets. <br>
+  Worries about the long term prospects of IO. With an open source product such as tiOPF you have access to all the source code. In addition you get to influence the direction of the project by your contributions etc. </p>
+<p>Limited support for client side databases. XML for example.</p>
+<p>While IO may be good for some projects it is not necessarily good for all projects. Therefore it is very likely for me that I will have to work/learn more than one persistence framework. Learning a persistence framework inside out takes time.</p>
+<p>IO controls the database structure. It is not possible (as far as I am aware) to use IO with a legacy database. In addition I personally do not like the way they use binary fields to store relationship information where you have a 1 to n relationship. With tiOPF you can use the auto map stuff and when you need to, for reasons such as performance or because you are working with a legacy database, yon can resort to hand crafted SQL to fetch objects from the database.</p>
+<p>Here are some comments on the history of the project and the conversion process so far.</p>
+<p>The application uses paradox tables and is aimed at dairy farmers in the UK. We currently have it installed on over 1000 farms. We have a requirement to radically re-work one of the modules in the application. From experience on other projects we decided that we would use some form of persistence framework. The person doing the work is new to persistence frameworks and has mainly been involved in RAD style programming. We looked at tiOPF and InstantObjects along with a smattering of OBIWAN type offerings. InstantObjects has been great in that it has allowed the programmer doing the work to become aquatinted with OO database applications. It is easy to get started etc. However we are now finding that we are getting issues on such as performance etc. We knew when we started that this would probably happen and that the day would come where we would have to move but at the start for the programmer involved it was easier to use IO. There are about 40 business classes. Moving these to tiOPF is fairly easy, but fairly time consuming. It is a matter of replacing all the _InstantTypes with native equivalents and amending the setters and getters accordingly. In addition you have to set up all the table/field mappings for all the properties of each class - This bit in IO is very simple. In tiOPF it is more time consuming just because you have to write the code by hand. I have also had to descend al our business objects from a standard class which allows descendants to override methods such as BeforeStore etc.</p>
+<p>For simple forms we have maintained the principle of using non data aware controls and every form has a SetEditObject and GetEditObject method. For more complex forms where there is a 1 to n relationship we have used data aware grids for display only purposes and InstantExposers. InstantExposers present lists of objects in a TDataset way which allows us to use data aware grids. The reason for using data aware grids is that the rest of the application uses them and we did not want the new module to look and work in a radically different manner. To replace the exposers we are using tiDatasets which allow us to use the grids in the same way as before.</p>
+<p>There are still some things I have to figure out. But by and large the conversion process has not been too bad for us. In fact I am quite surprised how easy things have been which I believe is a good indication of the flexibility of tiOPF. I am not sure if things would have been quite so easy going the other way.</p>
+<p>IO things that I will miss.</p>
+<p>There is an class called TInstantSelector. At the name suggests this allows you to select objects. For example you can write queries such as "SELECT * from any TPerson". Which would return you a list of all TPerson descendants. For simple queries it is great - basically the statement you write gets mapped to standard SQL. This is fine until you have data stored in binary fields and you want to add some form of WHERE clause.</p>
+<p>Design time tools. IO comes with some good editors and database creation tools. It is so easy in IO to create a new business object and have IO<br>
+  generate the database tables etc.</p>
+<p>I hope this is not too long winded, and it offers others an insight into the conversion process. Let me know if you want any further information.</p>
+<p>Regards</p>
+<p>James</p>
+<hr>
+<p>I am an IO user / lurker and just wanted to point out that the main things keeping me from migrating right now (besides already being mid-project) are the design time support from IO, the ability to build the databases with a function call, and the NexusDB connection</p>
+<p> Until I switched from IO I thought in a similar fashion. However I now prefer being able to control databse creation etc in code, rather than relying on IO to build the database. It means that I have full control over the database structure - I am not forced to use BLOBS etc,&nbsp; I can easily write DUNIT tests and I can write applications which integrate with legacy data.</p>
+<p> Objects can be wired up to data aware controls using tiDatasets if the need arises.</p>
+<p> For me the question&nbsp; is not about which design time features we should take from IO, but more about what we do with tiOPF in relation to Delphi 8. Which I think is kind of what Peter was saying in an earlier email. I have just received my copy of Delphi 8 which includes the ECO stuff so I will start to look at this over the next few weeks.</p>
+<hr>
+<p> I am an IO user / lurker and just wanted to point out that the main things keeping me from migrating right now (besides already being mid-project) are the design time support from IO, the ability to build the databases with a function call, and the NexusDB connection. If I had the NexusDB connection and the ability to build the databases, I'd consider switching even mid-stream.</p>
+<p> Another feature I'd really like to see tiOPF have is the ability to wire up an object to data-aware controls.</p>
+<p> Thanks for listening!</p>
+<p>Best Regards,</p>
+<p>Mark</p>
+<p><hr>
+Bold will not load all the rows from the DB to satisfy an OCL expression unless you've told it to or you've messed up the associations in your model or there's something fundamentally wrong with your model. I'm no expert but I've spent a while browsing the Borland MDA newsgroup and I've had discussions with some Bold experts and behaviour like you've just described doesn't happen with Bold unless you've done something wrong.
+<p> May be, I tried Bold before it was added to Delphi, but I remember that (I'm talking of 3.x version) not all OCL features was supported by the OCL2SQL parser, so in these cases BOLD loads all objects and then applies a filter at client level. May be it was improved.</p>
+<p> I had an in depth discussion with Bryan Crotaz at a UK BUG meeting when I gave a presentation on tiOPF and he was demonstrating the BOLD retina add ons. He said the learning curve with Bold is quite steep compared with tiOPF and there are many mistakes made by first time users (just as with tiOPF).</p>
+<p> Where Bold scores over tiOPF is the model editing, design-time stuff and the OCL support. If we can incorporate the IO stuff into tiOPF and an OCL evaluator we would have something very special indeed.</p>
+<p> I would prefer an OQL language instead of an OCL. I don't know OCL very well, but it don't seems to me suitable to build query on relational systems. My point of view is that an OPF system should be nearest to the relational system than to the OO language. Because this would let me to use the DB's features, more tested and more performing. If someone buyed Oracle, could I use it only as a storage?</p>
+<p> IMHO, an OQL language could let me an OQL query, but even an OQL stored procedure. I don't know if OCL could do this.&gt;</p>
+<hr>
+<p> Hi Pietro,</p>
+<p> Bold will not load all the rows from the DB to satisfy an OCL expression unless you've told it to or you've messed up the associations in your model or there's something fundamentally wrong with your model. I'm no expert but I've spent a while browsing the Borland MDA newsgroup and I've had discussions with some Bold experts and behaviour like you've just described doesn't happen with Bold unless you've done something wrong.</p>
+<p> I had an in depth discussion with Bryan Crotaz at a UK BUG meeting when I gave a presentation on tiOPF and he was demonstrating the BOLD retina add ons. He said the learning curve with Bold is quite steep compared with tiOPF and there are many mistakes made by first time users (just as with tiOPF).</p>
+<p> Where Bold scores over tiOPF is the model editing, design-time stuff and the OCL support. If we can incorporate the IO stuff into tiOPF and an OCL evaluator we would have something very special indeed.</p>
+<p> Cheers,</p>
+<p> Andrew</p>
+<hr>
+<p> I've been fortunate enough to obtain a copy of Delphi 8 Architect and The ECO stuff is essentially Bold for .NET. It's based on much of the Bold code-base, but (and it's a big but) there's no easy method to port a Bold for Win32 model to an ECO one. Borland really dropped the ball with this one. Hopefully, they'll ship a migration tool at some point in the near future. I doubt that the ECO stuff will filter down to lower versions as Borland has shown no inclination to do this in the past and Bold used to retail for many thousands of pounds. Also, Borland are also shipping a copy of D7 with each copy of D8 as D8 is .NET only, so I'm also getting D7 Architect with Bold. I'm very interested to see how the Bold and tiOPF compare. I've played around a little with Bold in the past, but haven't done anything serious with it.</p>
+<p> I don't know ECO, but if it is a Bold for Dot.Net, I have a question to do: do you (all Delphi programmers) really want an OPF which loads, e.g., all 10000 rows from the DB, only to retrieve the 10 specified by the OCL query?</p>
+<p> Because Bold works like this. I don't understand why Borland added it to Delphi (but QuickReport suggest me something...) I tried Bold in 2001, and I was happy to see a tool like this, but when I saw how it works, I removed from my library immediately. </p>
+<p> Yes, it has an OCL2SQL parser, but it don't works in all kind of queries.</p>
+<p> The real strenght of tiOPF (IMHO) is that it lets you to use the power of underlying DB, it lets you to write optimized queries to select the objects u need, and only that!! Yet, it let u to use stored procedures, which in many enviroments it's a real need.</p>
+<p> I tried IO, I liked it, but I uninstalled it when I saw it don't let you to query on object properties (e.g. u can't select an object having a property of some owned object equalt to...)</p>
+<p> IMHO, this feature of tiOPF is it's very stregth, and I hope future versions will enhance it.</p>
+<p> Bye</p>
+<hr>
+<p> I'm keen to re-cycle what ever features InstantObjects offers that we feel will add value to the tiOPF - some GUI designers are good candidates as a starting point.</p>
+<p> Now, I wonder why they made InstantObjects free and open source? I suspect it's partly a way to give the product some life beyond the release of D8 &amp; ECO.</p>
+<p> Before committing too much development time to tiOPF, I'm keen to see how ECO works and how the uptake of the framework is. I suspect the price is beyond many at the moment, but ECO features are bound to be moved into lower levels of Delphi with subsequent releases.</p>
+<p> I think we have had a great run with tiOPF, but I'm not emotional about keeping the product alive when there are better tools available. tiOFP is there because we need it. If ECO, will do the job better, I'm happy to jump ship. If ECO looks like always being too expensive, or it can't do things the tiOFP can, then I guess we will all continue to work on the tiOFP source.</p>
+<p> My personal priorities for the tiOFP in the next month or so are to get</p>
+<p> ALL the DUnit tests passing under D5, D6 &amp; D7. I think this is going to be quite a big job. Once this is done, I will implement a FinalBuilder script to build all packages and demos, and run all unit tests (under three version of Delphi) then send an email to the list to report on the build status. I want this process to be repeated once a day.</p>
+<p> With those loose ends tidied up, I will focus on learning some Dot Net stuff for a while. </p>
+<p> What do people think about a place for the tiOFP in the Dot Net world? Will it be easy to convert? Is there already something that will do the job, but at a better price than ECO?</p>
+<p> Regards,</p>
+<hr>
+<p> A this is tiOPF's weakest area and IO's strength. So we try to take the Class Editor and InstantSelector and include them in tiOPF. </p>
+<p> I Agree Merging the two projects would not be practical they are based on entirely different ideas. I know. When I talk about Merge I talk abou stop the IO deploy and the IO's users and Authors work togheter with tiOPF, why without doubts it is better.</p>
+<p> Could we put at tiOPF too the follow IO's stuffs:<br>
+  -Automated transactions.<br>
+  -Class editor<br>
+  -InstantSelector and others components non-visual<br>
+  -Many Database drivers</p>
+<hr>
+<p> Hi All,</p>
+<p> The idea I had was to incorporate the design-time stuff of IO into tiOPF as this is tiOPF's weakest area and IO's strength. So we try to take the Class Editor and InstantSelector and include them in tiOPF.</p>
+<p> Merging the two projects would not be practical they are based on entirely different ideas. Where tiOPF blows IO out of the water is at the "back-end" in terms of integrating legacy applications. Storing relationships in blobs is a huge no no, IMHO.</p>
+<hr>
+<p> I'm not really familair with IO, but i've tried it a few times to evaluate, it really looks fairly simple.</p>
+<p> I've got a few complaints about it:<br>
+  -Relations are stored in blobs (Big problem).<br>
+  -It uses RAD/datasets/fields etc. (Yeah i know)<br>
+  -It has a "weak" NULL fields approach (but it works)<br>
+  -It alway's recreates the database (no additional restructuring possible)</p>
+<p> Well to be short: Its totally unusable if you want to use or mix it with other legacy systems.</p>
+<p> On the other hand:<br>
+  -Automated transactions.<br>
+  -Is has a handy class editor<br>
+  -It has a beatifull InstantSelector<br>
+  -Many Database drivers..</p>
+<p> Greetings,</p>
+<p> Marius.</p>
+<hr>
+<p> Hello all.</p>
+<p> I would like to know if some of you think of taking parts of IO and include them in tiOPF.</p>
+<p> If so, what do you think will be added?</p>
+<p> Thanks</p>
+<p> Vincent Bergeron</p>
+<hr>
+<p> There is many thinks:<br>
+  - Components Non-Visual to deploy RAD way (TInstantConnectionManag);<br>
+  - Database Auto Create;<br>
+  - Expert to Build Classes and Properties;<br>
+  - Simple attribute classes (TInstantInteger, TInstantString);<br>
+  - Object Presentation (InstantExposer e Selection);<br>
+  - some other think that i have forget.</p>
+<p> Peter! Why you don't talk with IO authors and try merge your technology (tiOPF and IO)? As Firebird and Yafill do!!!</p>
+<p> Thanks.<br>
+</p>
+<!--#include virtual="/Shared/Footer.html"-->
+</body>
+</html>

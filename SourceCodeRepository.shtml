@@ -1,0 +1,85 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>tiOPF Source code repository</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>tiOPF Source code repository</h1>
+<br>
+
+<table id="toc" class="toc" summary="Contents">
+  <tr>
+    <td>
+      <div id="toctitle"><h2>Contents</h2></div>
+      <ul>
+        <li class='toclevel-1'><a href="#CLI"><span class="tocnumber">1</span> <span class="toctext">Using the command line client</span></a></li>
+        <li class='toclevel-1'><a href="#GUI"><span class="tocnumber">2</span> <span class="toctext">Using a GUI client</span></a></li>
+        <li class='toclevel-1'><a href="#Web"><span class="tocnumber">3</span> <span class="toctext">Using a web browser</span></a></li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+
+<p>We have recently migrated our source code repository to Git on Sourceforge:</p>
+<a href="http://sourceforge.net/scm/?type=git&group_id=62469">http://sourceforge.net/scm/?type=git&group_id=62469</a>
+<p>The main source code repository has already been migrated. The other repositories
+like the SupportApps, Docs and Website will follow in the next few days.</p>
+<p><span style="font-weight: bold;">There are several ways you can access the
+source code repository:</span><br>
+Please note that all the URI's below use the "git://" (read-only) protocol. If you have
+read-write access to this project on SourceForge, then log into your SourceForge
+account via their website, and click on the Code section to see the URI you must
+use for read-write access.</p>
+<p>If you would like to contribute to this project, it is highly recommended you
+create a public account on say GitHub, and share your code changes there via a
+"feature" branch. It then makes it really easy for us to pull your changes, review,
+ comment etc and hopefully merge those changes into the main repository.</p>
+<a name="CLI"></a><p><b>1) Using the command line client (recommended)</b><br>
+</p>
+<p>You can download Git, or get instruction on how to install it, from here:<br>
+</p>
+<p><a href="http://git-scm.com/downloads">http://git-scm.com/downloads</a><br>
+</p>
+<p>Once installed you can use the following commands to check out the source:<br>
+</p>
+<pre>
+ git clone git://tiopf.git.sourceforge.net/gitroot/tiopf/tiopf
+</pre>
+<p>This will leave you in the 'master' branch with a README.txt file explaining 
+the repository branch layout. We don't use the 'master' branch for development
+work.</p>
+<p>For example, if you want the tiOPF3 branch, then do the following:</p>
+<pre>
+  git branch tiopf3 origin/tiopf3                (1)
+  git checkout tiopf3                            (2)
+</pre>
+<ol>
+  <li>Creates a local branch named 'tiopf3', which points to the remote tiopf3 branch.
+  <li>Switch to your local 'tiopf3' branch.
+</ol>
+<p>For a short introduction to using Git, you can refer to this message in the
+tiopf.development newsgroup.
+<a href="http://opensoft.homeip.net/webnews/webnews.cgi?user=anonymous;group=tiopf.development;article=3272">tiopf.development;article=3272</a>. For
+extensive and very good documentation on Git, we highly recommend you browse through
+the offical Git documentation as well, located here: <a href="http://git-scm.com/documentation">http://git-scm.com/documentation</a>
+<a name="GUI"></a><p><b>2) Using a GUI client</b></p>
+<p>The standard installation of Git already includes the official GUI tools,
+as well as the Command Line Client. Under Windows, the installation should have
+asked you if you want Windows Shell integration too.</p>
+<p>Alternatively, you can try TortoiseGit, or any of the other GUI frontends. But
+this is definitely not a requirement, as the official Git tools are very good.
+</p>
+ 
+<a name="Web"></a><p><b>3) Using a web browser</b><br>
+A read only view of the repository is available by pointing your web browser here:
+</p>
+<p><a href="http://tiopf.git.sourceforge.net/git/gitweb.cgi?p=tiopf/tiopf;a=summary">http://tiopf.git.sourceforge.net/git/gitweb.cgi?p=tiopf/tiopf;a=summary</a><br>
+</p>
+
+
+<!--#include virtual="/Shared/Footer.html"-->
+</body>
+</html>

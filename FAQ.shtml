@@ -1,0 +1,181 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>tiOPF Frequently asked questions (FAQ)</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+
+<h1>tiOFP Frequently asked questions (FAQ)</h1> 
+<hr>
+<strong>Question:</strong> I want to build an application that uses just one persistence layer and do not want to use runtime packages. How do I do this?
+<p><strong>Answer:</strong> In the Delphi IDE, turn off compile with runtime packages, and in your dpr ensure your code is similar to that below:</p>
+<p>uses<br>
+  tiPersist,<br>
+  tiQueryXXX, // or whatever layer (ie tiQueryIBX)<br>
+  ctiPersist, // Contains the cTIPersistxxx constants<br>
+  ....</p>
+<p>gTIPerMgr.LoadDatabaseLayer( cTIPersistIBX, // Matches one above<br>
+&lt;DatabaseName&gt;,<br>
+&lt;UserName&gt;,<br>
+&lt;Password&gt; );<br>
+  Application.SoOnAndSoForth...</p>
+<p>gTIPerMgr.Terminate ;</p>
+<p>The result will be a single exe with no package dependencies.</p>
+<hr>
+<p><strong>Question:</strong> I have just upgraded to the latest version of the framework, but now when I compile the tiSQLManager, tiSQLEditor or DemoTIPerFramework applications, I get an error like this:</p>
+<p><strong>Answer:</strong> This error is typically caused when you have an old version of a bpl file higher up on the search path than the most recent version. From this error, it looks like the procedure HOS has been added to TtiPerMgr. The application will compile because it can see the correct version of the PAS and DCP files, but it is loading the wrong BPL file at runtime. Do a search on your system for all tiPersistCore.bpl files and you will probably find more than 1. (I usually have the output directory for my BPL files set to C:\TechInsite\Bin. The BPLs will be put into the Delphi\Bin directory by default so if you did not set the output directory correctly when you first loaded the framework, there could be multiple BPLs on your system.)</p>
+<hr>
+<p><strong>Question:</strong> When I run the SQLManager and SQLEditor from inside Delphi, they are fine and very well behaved. However, when I run them outside of the Delphi IDE, things start to go wrong.</p>
+<p><strong>Answer:</strong> Take a look at the Run|Parameters options for both applications in the Delphi IDE. Some parameters must be passed to identify the persistence layer, database, user name and password.</p>
+<hr>
+<p><strong>Question:</strong> I can't build/compile either the SQL manager or editor. Delphi complains about a missing tiSQLMgr_Cli which is used in the FChildQuery, FFindQuery, FMainSQLManager and FSQLEditor units.</p>
+<p><strong>Answer:</strong> Make sure you have \TechInsite\tiPersist in Delphi's search path. Read Geting Started for more details on the search paths that are necessary.</p>
+<hr>
+<p><strong>Question:</strong> Why does the bitmap of the SQL manager on the web show SQL with colour syntax highlighting, but the SQLManager has just black text when I compile an run it?</p>
+<p><strong>Answer:</strong> The colour syntax highlighting is achieved with the help of an open source component called SynEdit which can be downloaded from http://synedit.sourceforge.net/ Add the compiler directive SYNEDIT to the SQLManager and tiSQLEditor to include these components.</p>
+<hr>
+<p><strong>Question:</strong> With Interbase 6.0 installed, any attempts on opening the sample database distributed with the TechInsite framework will fail with the following error message: &quot;Error connecting to the requested database: Unsupported on-disk structure for file C:\TECHINSITE\DEMOS\DEMOTIPERFRAMEWORK\ADRS.GDB; <br>
+  found 9, support 10&quot;; </p>
+<p><strong>Answer:</strong> Please check whether you are using Borland's Interbase 6.01. This particular version dropped support for databases created by previous versions of Interbase. </p>
+<p><strong>Solution 1:</strong> If you are proficient with SQL and Interbase, you can manually recreate the database in IB6.01. You can find the DDL script in the &quot;C:\TECHINSITE\DEMOS\DEMOxxxxx\DDL\&quot; folder. </p>
+<p><strong>Solution 2</strong>: Replace IB6.01 with another version of IB6 that doesn't have the ODS restriction such as Borland Interbase 6.0 (download link?) or the FireBird Interbase distribution (download link?).</p>
+<hr>
+<p><strong>Question:</strong> The sql field in table &lt;sqlman_sql&gt; is now a text blob. I can no longer use the SQLMgrDDL_Interbase.sql script, or my own for that matter :-(</p>
+<p><strong>Answer:</strong> While the text blobs can't be specified directly in sql, you can use a UDF (user defined<br>
+  function) to enter them. There are a number for free UDF libraries available.</p>
+<p>This link... http://www.ibphoenix.com/ibp_contrib_download.html#DEVCOMPS listed a number of them. The &quot;FreeUDFLib for windows&quot; provides StrBlob (String to Text Blob) function. There is a declaration script and compiled DLL.</p>
+<p>The declare script is...</p>
+<p>declare external function f_StrBlob<br>
+  cstring(254),<br>
+  blob<br>
+  returns parameter 2<br>
+  entry_point 'StrBlob' module_name 'FreeUDFLib.dll';</p>
+<p>You run this in ISQL/WSQL or the like against your database.</p>
+<p>Now we can code...</p>
+<p>insert into sqlman_sql<br>
+  ( oid, group_oid, query_name, sql ) values<br>
+  ( 1, 1, 'GET_NEXT_OID', f_StrBlob('select oid from next_oid') ) ;</p>
+<p>Other functions appear to be worth checking out too (eg. soundex function)</p>
+<hr>
+<p><strong>Question:</strong> I have a question with regards to writing a ADO version of tiQuery: where should<br>
+  I place the connection string required for a ADO connection? e.g. </p>
+<p>FConnection.ConnectionString := 'Provider=Microsoft.Jet.OLEDB.4.0;' +<br>
+  'Mode=ReadWrite;Persist Security Info=True;' +<br>
+  'Data Source=C:\data.mdb' +<br>
+  ';Jet OLEDB:System '+<br>
+  'database=C:\system.mdw;'+<br>
+  'User ID=Admin;Password=manager';</p>
+<p>It is not clear how the TtiDatabase procedures--Create, Connect, GetConnected,<br>
+  and SetConnected--should be use for a ADO connection. </p>
+<p><strong>Answer:</strong> Where to put the connection string? Good question.</p>
+<p>You have three place holders: DatabaseName, UserID and Password.</p>
+<p>One option would be to break it into three parts:</p>
+<p>DatabaseName := 'c:\data.mdb' ;<br>
+  UserName := 'Admin' ;<br>
+  UserPassword := 'manager' ;</p>
+<p>Then join the parts up again when the thing attempts to connect:</p>
+<p>FConnection.ConnectionString :=<br>
+  'Provider=Microsoft.Jet.OLEDB.4.0;Mode=ReadWrite;Persist Security Info=True;DataSource=' + DatabaseName + ';Jet OLEDB:System database=C:\system.mdw;User ID=' + UserName + ';Password=' + UserPassword ;</p>
+<p>... I like this option.</p>
+<p>...Another, which Ian has been pressing for is to add a Params property to to the abstract database connection. That way we could add any extra info there we want.</p>
+<p>The thind option would be to use a <br>
+  gCommandLineParams( 'MyParamName' ) call inside the database connection, when the connection string is being built up to get a param name from the command line. This would get you out of the woods if you needed to make somthing like the Mode=ReadWrite property accessable, and did not want to do a lot of work.</p>
+<p>I know the database connection looks like it's very complex (probably because it is), but there are reasons for this. Some of these reasons are that the framework uses database connection pooling, so it will create as many connections as is required at the time ( say you have some threads running, each requining a connection). When these connections have not been used for &lt;n&gt; minutes (this setting is in tiPoolAbs as a constant) the connections will be closed off.</p>
+<hr>
+<p><strong>Question:</strong> I tried to add 100 TPerson (with no Address or TEAddress) in DemoTIFramework demo. The task was very slow (about 2 minutes). How do I optimise the tiOPF?</p>
+<p><strong>Answer:</strong> I expect the problem you are having is due to the way the visitors are registered<br>
+  in the demo application. (The approach has been optimised for simplicity, rather<br>
+  than performance), but in case I&rsquo;m wrong, I will walk you through the optimisation<br>
+  process.</p>
+<p>FYI, I load a 5000 node tree in about 10 seconds. I do this inside a thread<br>
+  which kicks off before the user logon screen shows. This way, all the background<br>
+  data is loaded by the time the user has finished typing her password.</p>
+<p>Anyway, optimisation&hellip;</p>
+<p>Firstly, open tiLog.pas and find the constant cSevToLog which will be declared<br>
+  around about line 400. This constant sets up a filter to limit the type of messages<br>
+  which are logged. Uncomment the entry for lsVisitor and run the application.<br>
+  You will see that the visitor manager is doing much more work that you will<br>
+  have expected. (One day, we must make it easier to change the logging levels,<br>
+  perhaps from a GUI or INI file.)</p>
+<p>The problem is, that for every TPerson you have added to the list, queries to<br>
+  read both the addresses and Eaddresses have been run.</p>
+<p>There are several way around this problem:<br>
+  In the FtiAdrsListMain.pas unit, you will see the following code in the read<br>
+  method &ndash;<br>
+  gTIPerMgr.ReadPK( gAdrsBook ) ;<br>
+  gTIPerMgr.Read( gAdrsBook ) ;</p>
+<p>The first line will read the people into the list, and the second line will<br>
+  cause each person&rsquo;s addresses to be read. You can comment this line out, and<br>
+  add it to the TTreeView&rsquo;s OnSelectNode event. The code is already there and<br>
+  commented out &ndash;</p>
+<p>if pData is TPerson then<br>
+  gTIPerMgr.Read( TPerson( pData ))<br>
+  else<br>
+  if pData is TCompany then<br>
+  gTIPerMgr.Read( TCompany( pData )) ;</p>
+<p>This will give you delayed loading, which will speed things up a lot.</p>
+<p>Now, as I said, the way the visitors are registered is designed to make it simple<br>
+  for a new programmer to get started, but is not very efficient.</p>
+<p>Visitors are being registered like this:</p>
+<p>gTIPerMgr.RegReadVisitor( TVisCompanyRead_Detail ) ;<br>
+  gTIPerMgr.RegReadVisitor( TVisPersonRead_Detail ) ;<br>
+  gTIPerMgr.RegReadVisitor( TVisAdrsRead ) ;<br>
+  gTIPerMgr.RegReadVisitor( TVisEAdrsRead ) ;</p>
+<p>Which means, when ever gTIPerMgr.Read( bla ) is called, all the read visitors<br>
+  execute. As the programmer of the system, you will probably know exactly which<br>
+  visitors you want to execute in a given situation, so you can register them<br>
+  under different names like this:</p>
+<p>gTIPerMgr.VisMgr.RegisterVisitor(&lsquo;ReadCompanyDetails&rsquo;,TvisCompanyRead_Details) ;<br>
+  gTIPerMgr.VisMgr.RegisterVisitor(&lsquo;ReadPersonDetails&rsquo;,TVisPersonRead_Detail) ;</p>
+<p>and so on&hellip;(This will give quite a big performance improvement)</p>
+<p>Now, if you are using auto generated object -&gt; database mappings (which I think<br>
+  you are not), you will find these very slow. The system will be writing rather<br>
+  verbose SQL, and running each query many times. Hard coded object -&gt; database<br>
+  mappings, or the tiSQLManager mapping stratergy will be much faster.</p>
+<p>If you are using the tiSQLManager, you can check the timing of the queries.<br>
+  Run a query and there will be two times in the status bar of the grid that shows<br>
+  the result set. One will show how long the query took to run on the server,<br>
+  and the other will show how long it took to scan the result set and convert<br>
+  it into objects. This information is also available from the tiLog if you turn<br>
+  the lsQueryTiming option on (it&rsquo;s on by default).</p>
+<p>Finally, one big query is faster to run than lots of little queries. The demo<br>
+  has been setup so we can switch between the three OO-SQL mapping strategies,<br>
+  but this has meant the tiSQLManager strategy can not be optimised. Lets say<br>
+  we want to read all the info about a person, there are three ways of doing this.</p>
+<p>a) Run a query to read all the people, then run another two queries for each<br>
+  person, one for the addresses and one for the Eaddresses. This is what we are<br>
+  doing and it is very slow.</p>
+<p>b) Run a query to read all the people, then just on query for each of the addresses<br>
+  and eaddresses. For each address and eaddress found, search the list of people<br>
+  so the relationship can be setup in Delphi code. This will be much quicker.</p>
+<p>c) Sometimes, depending on your database, the quickest approach will be to join<br>
+  the person, address and Eaddress tables and return on huge result set. This<br>
+  can be turned into a tree of objects in a single pass.</p>
+<p>
+<hr>
+<strong>Question:</strong> I set up my example contact manager project and then try to run and get the<br>
+  following error: Rebuilding SysUtils.dcu: Cannot Find FFMT.OBJ.</p>
+<p><strong>Answer: </strong>Remove $(DELPHI)\source\rtl\sys from the directories/conditionals search<br>
+  path (project options). Alternatively, create FFMT.OBJ by following the<br>
+  instructions at http://community.borland.com/article/0,1410,20492,00.html .</p>
+<p>
+<hr>
+<strong>Question:</strong> I set up my example contact manager project and then try to run and get the following error: Rebuilding SysUtils.dcu: Cannot Find FFMT.OBJ. </p>
+<p><strong>Answer:</strong> Remove $(DELPHI)\source\rtl\sys from the directories/conditionals search path (project options). Alternatively, create FFMT.OBJ by following the instructions at http://community.borland.com/article/0,1410,20492,00.html .</p>
+<p><strong>Question:</strong> When attempting to run the demo application, I get an error dialog with a message along the lines of &lsquo;The procedure entry point @TIQuery@&hellip;could not be located in the dynamic link library tiPersistCore.&rsquo; A copy of this error dialog is shown below. </p>
+<p> <strong>Answer:</strong> You have an abstract class, with a virtual abstract method in one package. You have created a descendant class, and overridden the virtual abstract method in another package, but you called inherited in the concrete class by mistake.</p>
+<p> How this got me:</p>
+<p>I created a new method ExecRead( ) in TtiQuery, which is contained in tiPersistCore. I implemented this method in tiQueryBDEParadox, and used Ctrl+C to create the method stub. Ctrl+C will add an Inherited key work in the body of the method if it finds the word override in the interface. Ctrl+C does not check to see if you are overriding an abstract method. Cost me an hour of my life to track down.</p>
+<p>
+<hr>
+<p><strong>Question:</strong> I get a compiler message &lsquo;Bad package unit format&rsquo; (Shown below)</p>
+<p><strong>
+    Answer:</strong> You have a core package that is shared by two applications. One of the applications has a conditional define, like DEBUG set. You hit build all for one application, then try to compile the other without building all. The offending unit will cause the compile to fail.</p>
+<hr>
+<p><strong>Question:</strong> My application dies when calling the save method of an object. Running it in the IDE, I just get the CPU window. Running it stand-alone, it just terminates the application without any error message.</p>
+<p><strong>Answer:</strong> You have inadvertently created a circular reference between two published properties. When you call the Save method it produces a stack overflow. For example, if you have a stock control application, you might have a Stock item class with a Stock Group class object. The Stock Group class could also have a list of stock items that are of that type. If this class is Published you will get this problem. The trick is to move the Stock list from Published to Public and the problem will be solved. </p>
+<!--#include virtual="/Shared/Footer.html"-->
+</body>
+</html>

@@ -1,0 +1,35 @@
+Key points to make:
+
+---
+
+Unit testing of code that interacts with singletons:
+
+DUnit 2 may report leaks
+
+Just access the singleton
+
+Drop and re-create the singleton
+
+Isolate access to the singleton via a virtual method
+
+Use traverse up the object graph with Parent.Parent
+
+Delay accessing the singleton resource as long as possible
+
+Testing classes with private methods (make them protected)
+
+* * * * * * *
+
+To do
+
+  Add adrs demo to build
+  
+  (Write part II, III & IV (Won't get done))
+
+Tues Practice
+
+Wed Practice
+
+Thurs Practice
+
+

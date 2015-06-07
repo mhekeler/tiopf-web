@@ -1,0 +1,46 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>tiOPF Documentation - References and Further Reading</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+
+<h1>References and Further Reading</h1> 
+<h2>Download the source</h2>
+
+<h2>Scott Ambler</h2>
+<p>Two of Scott Ambler&rsquo;s papers have been used as references in the design of the tiOPF:</p>
+<p>&lsquo;Mapping Objects&rsquo;, which can be found at <a href="http://www.agiledata.org/essays/mappingObjects.html">http://www.ambysoft.com/mappingObjects.pdf</a> was used to design the high/low OID generation strategy which is used throughout the framework.</p>
+<p>The design of a robust persistence layer for relational databases&rsquo; which can be found in full at <a href="http://www.ambysoft.com/downloads/persistenceLayer.pdf">http://www.ambysoft.com/persistenceLayer.pdf</a>. This papers was used as the starting point for the automatic object to database mapping framework that was touched on in chapter 7.</p>
+
+<h2>The Gang of Four</h2>
+<p>In any substantial work involving object oriented design, it&rsquo;s impossible to escape the influence of &lsquo;The Gang of Four&rsquo;. Design Patterns: Elements of Reusable Object-Oriented Software. Gamma, Helm, Johnson, Vlissides. Addison Wesley, 1995.</p>
+
+<h2>The Jedi-Obiwan project</h2>
+<p>The Jedi-Obiwan project is an open source project to build an object persistence framework in Delphi. The specification, along with other design and discussion documents and a mailing list can be joined at <a href="mailto:jedi-obiwan-subscribe@yahoogroups.com">mailto:jedi-obiwan-subscribe@yahoogroups.com</a></p>
+
+<h2>Australian Delphi User Group (ADUG)</h2>
+<p>As a contract programmer without the support of an employer I depend heavily on our local user group for technical assistance, companionship and mentoring. My local user group is ADUG (<a href="http://www.adug.org.au">http://www.adug.org.au</a>) and has introduced me to the most generous group of professional programmers you could ever hope to meet.</p>
+
+<h2>Melbourne Pattern Group</h2>
+<p>A friend and fellow student of Patterns, Don Macrae, reckons that you have to &lsquo;Get&rsquo; a Pattern before you can utilise it fully. &lsquo;Getting&rsquo; a Pattern involves reading about it, talking about then implementing it a couple of times in several different ways. After a while, it becomes a comfortable tool in your programmers tool box and you are able to use it with little or no thought &ndash; just the way we all type try-finally-end around a resource we have created.</p>
+<p>One of the best ways to &lsquo;Get&rsquo; a Pattern is to join a Pattern 
+discussion group and an index of these groups can be found 
+at <a href="http://hillside.net/patterns/Groups.html">http://hillside.net/patterns/Groups.html</a>. The 
+Pattern group that helped me &lsquo;Get&rsquo; the patterns that are 
+central to the framework is in Melbourne, Australia and the web site can 
+be found at <a href="http://www.melbournepatterns.org">http://www.melbournepatterns.org</a></p>
+
+<h2>BorCon panel discussion (An introduction to OPFs) </h2>
+<p><strike><a href="http://bdn.borland.com/article/borcon/files/9022/paper/9022.html">http://bdn.borland.com/article/borcon/files/9022/paper/9022.html</a></strike>
+</p>
+<p>The original link doesn't exist any more. Thanks to the <a href="http://web.archive.org">Internet Archive project</a> I 
+managed to get a copy of the page. For convenience I generated a PDF version
+of that web page. You can download it <a href="Introduction_to_OPFs.pdf">here</a>.</p>
+
+<!--#include virtual="/Shared/Footer.html"-->
+
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>tiOPF Home Page</title>
+  <meta name="description"
+ content="tiOPF - The Free, Open Source object persistence framework for Delphi 7, BDS2006 &amp; Free Pascal. Helps you build complex OO applications with data being saved to SQLServer, Interbase, Oracle, FireBird, XML, CSV or to a remote database proxy server via HTTP. Has been used in large and small projects since 1998. Full source code with 1300 Unit Tests to assure quality. News group for peer support. Automatic build each night with all Unit Tests being run against each persistence layer against Delphi &amp; FPC compilers.">
+  <meta name="keywords"
+ content="tiOPF, Object Persistence Framework, OPF, Persistence Framework, Delphi, Borland, InstantObjects, Bold, ECO, Interbase, FireBird, Oracle, SQLServer, XML, CSV, Access, Database Layer, 3 Tiered, Object Orientated, OO, Multi Tiered, DBI, Database Interface Module, BOM, Business Object Model, RDBMS OO Mapping, Scott Ambler, GoF, Design Patterns, Visitor Pattern, Composite Pattern, Adaptor Pattern">
+<!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>tiOPF Build tools</h1>
+<p>The tiOPF is built regularly each day using <a
+ href="http://www.finalbuilder.com">FinalBuilder</a>, <a
+ href="http://dunit.sourceforge.net/">DUnit</a> and <a
+ href="http://www.jrsoftware.org/isinfo.php">INNOSetup</a><br>
+</p>
+<p><a
+ href="http://webnews.tiopf.com/webnews.cgi?user=Daily%20Build;group=tiopf.dailybuilds">The
+regular build reports are available on our news group.</a><br>
+<!--#include virtual="/Shared/Footer.html"--></p>
+</body>
+</html>

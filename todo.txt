@@ -1,0 +1,11 @@
+1.  TtiDataSet on component pallet
+2.  Sync live templates
+3.  tiVTTreeView & TtiVTListView demos
+4.  Quick start doc
+
+5.  Automate upload of site every half hour using CRON job;
+6.  Write the QuickStart doc;
+7.  Update the Concepts Manual;
+8.  Write the paper "Persisting objects and their relationships"
+9.  Generate online help as part of build and post to website (or SVN?)
+10. Modify build to write installs with SF compatible names. 

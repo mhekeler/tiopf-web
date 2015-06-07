@@ -1,0 +1,56 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>tiOPF Support by news groups</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>tiOPF Support by news groups (English) </h1>
+
+<h2>NNTP (news) server setup:</h2>
+<table width="100%" border="0">
+  <tr class="Normal">
+    <td width="164"><strong>News Server:</strong></td>
+    <td width="426">opensoft.homeip.net</td>  <!-- news.tiopf.com doesn't seem to work any more -->
+  </tr>
+  <tr class="Normal">
+    <td><strong>News Server port:</strong></td>
+    <td>119</td>
+  </tr>
+  <tr class="Normal">
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr class="Normal">
+    <td><strong>Web Interface:</strong></td>
+<!--    <td><a href="http://webnews.tiopf.com:8080/">http://webnews.tiopf.com:8080/</a></td> -->
+    <td><a href="http://opensoft.homeip.net:8080/webnews/">http://opensoft.homeip.net:8080/webnews/</a></td>
+  </tr>
+  <tr class="Normal">
+    <td><strong>User name:</strong></td>
+    <td>anything as long as it is a single alphanumeric name.</td>
+  </tr>
+</table>
+<p><strong>Currently we have 4 newsgroups setup:</strong>
+
+<p><strong>tiOPF.development:</strong> This is where the people developing the framework can 
+communicate about future or current issues.</p>
+
+<p><strong>tiOPF.support:</strong> Anybody only using the framework and not helping to 
+develop it, needs to post your questions and answers in here.</p>
+
+<p><strong>tiOPF.binary:</strong> When it is difficult to explain a problem, a small sample 
+application might help. This group allows for small attachments in .zip 
+format.</p>
+
+<p><strong>tiOPF.dailybuilds:</strong> The daily unit tests status emails get sent to this 
+area. No posting is allowed in here.</p>
+
+<h1>Google discussion group (Portuguese)</h1>
+<p><a class="moz-txt-link-freetext" href="http://groups-beta.google.com/group/tiopf_br">http://groups-beta.google.com/group/tiopf_br</a> 
+</p>
+
+<!--#include virtual="/Shared/Footer.html"-->
+</body>
+</html>

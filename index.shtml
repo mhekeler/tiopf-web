@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>tiOPF Home Page</title>
+  <meta name="description"
+ content="tiOPF - The Free, Open Source object persistence framework for Delphi 7, BDS2006 &amp; Free Pascal. Helps you build complex OO applications with data being saved to SQLServer, Interbase, Oracle, FireBird, XML, CSV or to a remote database proxy server via HTTP. Has been used in large and small projects since 1998. Full source code with 1300 Unit Tests to assure quality. News group for peer support. Automatic build each night with all Unit Tests being run against each persistence layer against Delphi &amp; FPC compilers.">
+  <meta name="keywords"
+ content="tiOPF, Object Persistence Framework, OPF, Persistence Framework, Delphi, Borland, InstantObjects, Bold, ECO, Interbase, FireBird, Oracle, SQLServer, XML, CSV, Access, Database Layer, 3 Tiered, Object Orientated, OO, Multi Tiered, DBI, Database Interface Module, BOM, Business Object Model, RDBMS OO Mapping, Scott Ambler, GoF, Design Patterns, Visitor Pattern, Composite Pattern, Adaptor Pattern">
+<!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+
+<h1>About the tiOPF</h1>
+The tiOPF is an Open Source framework for Delphi
+&amp; Free Pascal that simplifies the mapping of an object oriented
+business model into a relational database. The framework is mature and
+robust having been in use on production sites since 1999. It is
+free, open source, and available for immediate download with full
+source code.
+<h2>Overview</h2>
+For a birds eye summary of the tiOPF, read the <a
+ href="Doc/overview/index.shtml">overview</a> document.<br>
+<h2>Downloads</h2>
+<p><a href="http://download.tiopf.com">Download source code installer
+from Sourceforge</a></p>
+<p><a href="SourceCodeRepository.shtml">tiOPF Source code repository</a><br>
+</p>
+<p><a
+ href="http://opensoft.homeip.net/webnews/webnews.cgi?user=Daily%20Build;group=tiopf.dailybuilds">Daily
+build history</a></p>
+<h2>Support</h2>
+<p><a href="Support.shtml">News group for support</a></p>
+<h2>Documentation</h2>
+<p><a href="Doc/Installing/">Installing the tiOPF</a><br>
+</p>
+<p><a href="Doc/overview/index.shtml">An overview of the tiOPF</a><br>
+</p>
+<p><a href="Doc/QuickStart/">tiOPF Quick Start</a></p>
+<p><a href="Doc/Concepts/">tiOPF Concepts manual</a></p>
+<p><a href="Doc/UserInterface/">Building a user interface with tiOPF</a><br>
+</p>
+<p>* New <a
+ href="Doc/PersistingObjectsAndRelationships/SimpleCollection">Persisting
+objects and their relationships with tiOPF</a><br>
+</p>
+<h2>More information</h2>
+<p><a href="ApplicationsBuiltWithTheTIOPF.shtml">Applications built
+with the tiOPF</a></p>
+<p><a href="tiOPFvsInstantObjects.shtml">tiOPF vs InstantObjects</a></p>
+<p><a href="tiOPFvsBold.shtml">tiOPF vs BOLD</a><br>
+</p>
+<p><a href="CodeSubmission.shtml">Code submission guidelines</a><br>
+</p>
+<p><a href="LovesAndHates.shtml">Things we love and things we hate
+about tiOPF</a></p>
+<p><a href="FAQ.shtml">Frequently Asked Questions (FAQ)</a></p>
+<p><a href="Licence_MPL1_1.shtml">tiOPF Licence (Mozilla Public Licence
+Version 1.1)</a><br>
+</p>
+<p><a href="buildtools.shtml">Build tools used by the tiOPF project</a><br>
+</p>
+<p><a href="otherdownloads.shtml">Other downloads you may require</a><br>
+</p>
+
+<div id="SFLogo">
+  <a href="http://sourceforge.net/projects/tiopf"><img src="http://sflogo.sourceforge.net/sflogo.php?group_id=62469&type=8" width="80" height="15" border="0" alt="Get tiOPF at SourceForge.net. Fast, secure and Free Open Source software downloads" /></a>
+</div>
+
+</body>
+</html>

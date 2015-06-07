@@ -1,0 +1,693 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>A quick guide to tiOPF</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>A quick guide to tiOPF</h1>
+<h2 class="Normal">provided by Sean Cross of <a href="http://www.sourceitsoftware.com/">Source IT Software</a></h2>
+<p>This guide is designed to be read in conjunction with the tiOPF 2 and the associated demos.<br />
+tiOPF can be downloaded from the <a href="http://www.tiopf.com/">tiOPF Web Site</a></p>
+<h1>What is tiOPF</h1>
+<p>tiOPF is a Object Persistence Framework. That is, it is a framework based around saving your objects to, and loading them from, databases and/or flat files.</p>
+<p>According to the website:<br />
+<i>tiOPF is an Open Source framework for Delphi &amp; Free Pascal that simplifies the mapping of an object oriented business model into a relational database. The framework is mature and robust having been in use on production sites since 1999. It is free, open source, and available for immediate download with full source code.</i></p>
+<h2 class="Normal">Key Features</h2>
+<p>From the website:<br />
+Some of the key features of the tiOPF include:</p>
+<ul>
+<li>Lets you build an object oriented application that can swap databases with the flick of a command line parameter, conditional define or registry switch.<br />
+Currently we have the following persistence layers available:
+<ul>
+<li>Interbase/Firebird via IBX</li>
+<li>Firebird via FBLib</li>
+<li>Firebird via ZeosLib (experimental)</li>
+<li>Oracle via DOA</li>
+<li>MS Access &amp; MS SQL-Server via ADO</li>
+<li>Paradox via BDE</li>
+<li>XML via MSDOM or FPC's DOM</li>
+<li>CSV files</li>
+<li>TAB files</li>
+<li>There is also a lightning fast, custom XML persistence layer for local databases, and</li>
+<li>a HTTP/XML layer &amp; proxy server for building remote systems that can connect through corporate firewalls.</li>
+</ul>
+</li>
+<li>Supports Delphi 5, 6, 7, 2006, 2007, BDS 2006, RDS 2007, Free Pascal for Win32 and Linux.</li>
+<li>Family of abstract base classes for building a complex object model.</li>
+<li>32 Persistent object aware components for building complex GUIs.</li>
+<li>Has a Model-GUI-Mediator implementation to make standard GUI components object aware. An alternative to the persistent object aware components.</li>
+<li>1518 Unit Tests to guarantee stability;</li>
+<li>160 pages of documentation to get you started.</li>
+<li>Newsgroup for support.</li>
+<li>Automated, daily builds and unit testing.</li>
+</ul>
+<h1><em>Support</em></h1>
+<ul>
+<li><a href="http://tiopf.sourceforge.net/index.shtml">Website</a></li>
+<li><a href="http://sourceforge.net/project/showfiles.php?group_id=62469">Downloads</a></li>
+<li><a href="http://tiopf.sourceforge.net/SourceCodeRepository.shtml">Repository Details.</a></li>
+<li><a href="http://webnews.tiopf.com">WebNews</a></li>
+<li>News server: news.tiopf.com port 119</li>
+</ul>
+<h1>What are the advantages?</h1>
+<ul>
+<li>tiOPF provides database independence.<br />
+You can change databases by changing the persistence layer.<br />
+This can be as simple as changing a couple of lines of code.</li>
+<li>Your code can be more object orientated rather than record orientated.</li>
+</ul>
+<h1>What are the disadvantages?</h1>
+<ul>
+<li>A heavy learning curve.</li>
+<li>tiOPF is more code orientated and less RAD than using databases and data aware controls.</li>
+</ul>
+<p>&nbsp;</p>
+<h1>How do I create a business object?</h1>
+<p>Business objects descend from TtiObject.</p>
+<p>All TtiObject descendants have a unique Object ID with a property name of OID. This is of type integer, 64 bit integer or GUID. The OID is populated when a new object is created. The OID is saved and loaded automatically.</p>
+<p>Other fields needing persistence are declared as published.</p>
+<p>Object initialisation is done in CreateNew.</p>
+<p>Example - taken from Demo_Collection:</p>
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+TClient = class(TtiObject)
+  private
+    FClientID: TClientID;
+    FClientName: TClientName;
+  public
+    constructor CreateNew(const pDatabaseName: string = '';
+                const pPerLayerName: string = '');
+                override;
+  published
+    property ClientName: TClientName read FClientName write FClientName;
+    property ClientID : TClientID read FClientID write FClientID;
+  end;
+
+ ...
+
+  constructor TClient.CreateNew(
+               const pDatabaseName: string = '';
+               const pPerLayerName: string = '');
+    begin
+     inherited;
+      // Set some default values for the demo
+      ClientName:= 'TEST ' + DateTimeToStr(Now);
+      ClientID:= IntToStr(GetTickCount);
+    end;
+</textarea>
+<p>Business objects are normally stored in a TtiObjectList descendant.</p>
+<p>This can be as simple a declaration as:</p>
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+  TClients = class(TtiObjectList);
+</textarea>
+<p>Commonly however Add and Items are reintroduced to provide type safety</p>
+<p>Example - taken from MastApp:</p>
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+TEmployees = class(TtiObjectList)
+  private
+  protected
+    function GetItems(i: integer): TEmployee; reintroduce;
+    procedure SetItems(i: integer; const Value: TEmployee); reintroduce;
+  public
+    property Items[i:integer]: TEmployee read GetItems write SetItems;
+    procedure Add(pObject: TEmployee); reintroduce;
+  published
+  end;
+</textarea>
+<p>New items are created with CreateNew</p>
+<p>Example - taken from Demo_Collection:</p>
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+procedure TFormCollection.btnInsertRowClick(Sender: TObject);
+  var LClient: TClient;
+   begin
+     LClient:= TClient.CreateNew;
+     FClients.Add(LClient);
+     LV.Refresh(LClient);
+   end;
+</textarea>
+<p>Items are deleted by setting the Deleted property to True.</p>
+<p>Note that they are only removed when the object list is persisted.</p>
+<p>&nbsp;</p>
+<h2 class="Normal">How do I persist it?</h2>
+<p>Examples from MastApp, using an access database.</p>
+<h2 class="Normal">There are 6 steps:</h2>
+<ol>
+<li>Include your persistence layer units and OID units:
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+uses
+    ...
+    ,tiOID ,tiQuery       // always required
+    ,tiOIDInteger ,tiQueryADOAccess         // use integer OID , and Access persistence
+</textarea>
+</li>
+<li>Set your default persistence layer:
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+gTIOPFManager.DefaultPerLayerName:= 'ADOAccess';
+</textarea>
+</li>
+<li>Connect to the database:
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+gTIOPFManager.ConnectDatabase('dbdemos.mdb', '', '');
+</textarea>
+</li>
+<li>Set your persistence mapping:
+<p>This depends on what mapping you are using, Automapping, DB Independent or hard coded. This is covered in a later section. Automapping is the simplest.<br />
+An object is mapped as follows:
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+// Class, Table, Property, Column, Special Info
+ gTIOPFManager.ClassDBMappingMgr.RegisterMapping(TEmployee, 'Employee', 'OID', 'EmpNo', [pktDB] ); 
+ gTIOPFManager.ClassDBMappingMgr.RegisterMapping(TEmployee, 'Employee', 'LastName', 'LastName' ); 
+ gTIOPFManager.ClassDBMappingMgr.RegisterMapping(TEmployee, 'Employee', 'FirstName', 'FirstName' ) ; 
+ gTIOPFManager.ClassDBMappingMgr.RegisterMapping(TEmployee, 'Employee', 'PhoneExt', 'PhoneExt' ) ; 
+ gTIOPFManager.ClassDBMappingMgr.RegisterMapping(TEmployee, 'Employee', 'HireDate', 'HireDate' ) ; 
+ gTIOPFManager.ClassDBMappingMgr.RegisterMapping(TEmployee, 'Employee', 'Salary', 'Salary' ) ; 
+ gTIOPFManager.ClassDBMappingMgr.RegisterCollection(TEmployees, TEmployee);
+</textarea>
+</p>
+</li>
+<li>Override Save and Read and make them public (for automapping it is sufficient to call the inherited handler):
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+  Txxxx = class(TtiObjectList)
+  public
+    procedure Read; override;
+    procedure Save; override;
+  end;
+  
+...
+  
+procedure Txxxx.Read;
+begin
+  inherited;
+end;
+
+procedure Txxxx.Save;
+begin
+  inherited;
+end; 
+</textarea> 
+</li>
+<li>Read/Save your object lists:
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+FEmployees:= TEmployees.Create; 
+    FEmployees.Read; 
+    FEmployees.SortByProps(['LastName', 'FirstName']);
+    ...
+    FEmployees.Save;
+</textarea>
+</li>
+</ol>
+<p>&nbsp;</p>
+<h2 class="Normal">How do I create a database?</h2>
+<p>You can create a dataset as you would normally, and then map your objects to it.<br />
+However you can also create a database in code using the persistence layer.<br />
+Example - from Demo_CreateDatabase:<br />
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+procedure
+  TFormMainCreateDatabase.btnDatabaseExistsClick(Sender: TObject);
+  var
+    LPerLayer: TtiPersistenceLayer;
+  begin
+    LPerLayer:= gTIOPFManager.PersistenceLayers.FindByPerLayerName(PersistenceLayerName);
+    Assert(LPerLayer&lt;&gt;nil, '"' + PersistenceLayerName + '" not registered');
+    if LPerLayer.DatabaseExists(DatabaseName, UserName, Password) then
+      ShowMessage('Database &lt;' + DatabaseName + '&gt; exists.')
+    else
+      ShowMessage('Database &lt;' + DatabaseName + '&gt; does not exist.');
+  end;
+
+  procedure TFormMainCreateDatabase.btnCreateDatabaseClick(Sender: TObject);
+  var
+    LPerLayer: TtiPersistenceLayer;
+  begin
+    LPerLayer:= gTIOPFManager.PersistenceLayers.FindByPerLayerName(PersistenceLayerName);
+    Assert(LPerLayer&lt;&gt;nil, '"' + PersistenceLayerName + '" not registered');
+    LPerLayer.CreateDatabase(DatabaseName, UserName, Password);
+    ShowMessage('Database "' + DatabaseName + '" has been created.');
+  end;
+</textarea></p>
+<p>Tables are created using TtiDBMetaDataTable.</p>
+<p>Example - from Demo_CreateTable<br />
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+// Does a table exist?
+  procedure TFormMainCreateTable.btnTableExistsClick(Sender: TObject);
+  var
+    lDBMetaData: TtiDBMetaData;
+    lPooledDB : TPooledDB;
+    lDatabase : TtiDatabase;
+  begin
+   lDBMetaData:= TtiDBMetaData.Create;
+    try
+      lPooledDB:= gTIOPFManager.DefaultDBConnectionPool.Lock;
+      try
+        lDatabase:= lPooledDB.Database;
+        lDatabase.ReadMetaDataTables(lDBMetaData);
+        if lDBMetaData.FindByTableName('Client') &lt;&gt; nil then
+          ShowMessage('Table &lt;Client&gt; exists')
+        else
+          ShowMessage('Table &lt;Client&gt; does not exist');
+      finally
+        gTIOPFManager.DefaultDBConnectionPool.UnLock(lPooledDB);
+      end;
+    finally
+      lDBMetaData.Free;
+    end;
+  end;
+
+  // Create table procedure
+  TFormMainCreateTable.btnCreateTableClick(Sender: TObject);
+  var 
+    lTableMetaData: TtiDBMetaDataTable;
+  begin
+    lTableMetaData:= TtiDBMetaDataTable.Create;
+    try
+      lTableMetaData.Name:= 'Client';
+      lTableMetaData.AddField('OID', qfkString, 36);
+      // Using GUID OIDs
+      lTableMetaData.AddField('Client_Name', qfkString, 200);
+      lTableMetaData.AddField('ACN', qfkString, 9);
+      gTIOPFManager.CreateTable(lTableMetaData);
+    finally
+      lTableMetaData.Free;
+    end;
+    ShowMessage('Table ''Client'' created');
+  end;
+
+  procedure TFormMainCreateTable.btnDropTableClick(Sender: TObject); 
+  begin 
+    gTIOPFManager.DropTable('Client'); 
+    ShowMessage('Table ''Client'' dropped'); 
+  end;
+</textarea></p>
+<p>&nbsp;</p>
+<h2 class="Normal">How do I filter it.</h2>
+<p>The easiest way to filter an object list is by descending from TtiFilteredObjectList.</p>
+<p>Example from Demo_CollectionWithCriteria<br />
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+TClients = class(TtiFilteredObjectList);
+
+  ...
+
+  FClients.Clear;
+  FClients.Criteria.ClearAll; 
+  // needed for Db Independent mapping 
+  // note Automapping can use property name instead of field name 
+  // DB Independent can only use field name at the moment
+  FClients.Criteria.AddLike('Client_Name', EditFilter.Text + '%');
+  
+  ...
+  
+  FClients.Read;
+</textarea></p>
+<p>An object list can also be filtered using Hard Coded Visitors.<br />
+See Demo_CollectionWithFilter</p>
+<p>&nbsp;</p>
+<h2 class="Normal">How do I build a GUI?</h2>
+<p>One of the main Gui elements is TtiVTListView. Columns are added using AddColumn, passing in the property name, type, display name and display size. To populate, the Data property is set to a TtiObjectList.</p>
+<p>Example from Demo_EditDataInGui<br />
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+LV.AddColumn('ClientID', vttkString, 'Client ID', 80); 
+  LV.AddColumn('ClientName', vttkString, 'Client name', 200);
+
+  FClients:= TClients.Create;
+  ...
+  FClients.Read; 
+  
+  LV.Data:= FClients;
+</textarea></p>
+<p>Add, Edit and Delete capabilites are provided using the OnEdit, OnInsert and OnDelete events.<br />
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+procedure TForm2.LVItemEdit(pVT: TtiCustomVirtualTree; pData: TtiObject;
+                    pItem: PVirtualNode);
+  begin
+   if TFormClientEdit.Execute(pData) then
+     pVT.Refresh(pData);
+  end;
+
+  procedure TForm2.LVItemInsert(pVT: TtiCustomVirtualTree; pData: TtiObject;
+                    pItem: PVirtualNode);
+  var
+    lClient: TClient;
+  begin
+    lClient:= TClient.CreateNew;
+    if TFormClientEdit.Execute(lClient) then
+      begin
+        FClients.Add(lClient);
+        pVT.Refresh(lClient);
+      end
+    else
+      lClient.Free;
+  end;
+
+  procedure TForm2.LVItemDelete(pVT: TtiCustomVirtualTree; pData: TtiObject;
+                    pItem: PVirtualNode);
+  begin 
+    if tiPerObjAbsConfirmAndDelete(pData as TClient) then
+      pVT.Refresh;
+  end;
+</textarea></p>
+<p>tiOPF also comes with a number of object aware controls such as TtiPerAwareEdit. These use the LinkToData method to attach to a TtiObject<br />
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+property Databuffer : TtiObject read FDataBuffer write FDataBuffer;
+  
+  ...
+  
+  paeOID.Value:= DataBuffer.OID.AsString; 
+  paeClientName.LinkToData(DataBuffer, 'ClientName'); 
+  paeClientID.LinkToData(DataBuffer,'ClientID');
+</textarea></p>
+<p>A GUI can also be built using standard non-db components and mediating views. Base edit and list mediator controls are provided in the GUI directory.</p>
+<p>There is a demo in \tiOPF2_Demos\GenericMediatingViews.</p>
+<p>&nbsp;</p>
+<h2 class="Normal">How do I use data aware controls?</h2>
+<p>Use TTiDataset and TtiNestedDataset. These are included in the latest svn.  
+They may not yet be available in the download version</p>
+<p>TtiDataset is linked to an object list using the method LinkObject defined as follows:<br />
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+  procedure LinkObject(AObjectList: TtiObjectList; AClass: TtiObjectClass);
+
+  //Example of use:
+
+  DatasetClients_.LinkObject(FClients, TClient);
+</textarea></p>
+<p>TtiNestedDataset is linked to an existing TtiDataset or TtiNestedDataset using the properties DataSetField and ObjectClass as follows:<br />
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+  NestedDataset_PhoneNumbers.DataSetField:= DatasetClients_PhoneNumbers; 
+  NestedDataset_PhoneNumbers.ObjectClass:= TPhoneNumber;
+</textarea></p>
+<p>See the dataset demo and unit tests for further information.</p>
+<p>&nbsp;</p>
+<h2 class="Normal">Useful units and functions.</h2>
+<table cellspacing="0" cellpadding="3" border="1">
+<tbody>
+<tr class="Normal">
+<td valign="top" width="150"><p><strong>Unit</strong></p></td>
+<td valign="top" width="450"><p><strong>Contains</strong></p></td></tr>
+<tr class="Normal"><td>tiObject</td><td>TtiObject and TtiObjectList</td></tr>
+<tr class="Normal"><td>tiFilteredObjectList</td><td>TtiFilteredObjectList</td></tr>
+<tr class="Normal"><td>tiCriteria</td><td>the TPerCriteria objects used in TtiFilteredObjectList</td></tr>
+<tr class="Normal"><td>tiOPFManager</td><td>gTIOPFManager</td></tr>
+<tr class="Normal"><td>tiAutoMap</td><td>Automapping</td></tr>
+<tr class="Normal"><td>tiVisitorDBAutoGen</td><td>TVisDBAutoGenRead and Update used in DB Independent Visitors</td></tr>
+<tr class="Normal"><td>tiVisitorDB</td><td>TVisOwnedQrySelect and Update used in Hard Coded Visitors</td></tr>
+<tr class="Normal"><td>tiOID</td><td>base OID. Needs to be included in your business model unit.</td></tr>
+<tr class="Normal"><td>tiOIDGUID</td><td>GUID OID. Needs to be included in your project at least once if you require guid OIDs</td></tr>
+<tr class="Normal"><td>tiOIDInteger</td><td>Integer OID. Needs to be included in your project at least once if you require int OIDs</td></tr>
+<tr class="Normal"><td>tiQuery</td><td>Contains the base TtiQuery object</td></tr>
+</tbody>
+</table>
+<p>Standard Persistence layers Either include the required unit, or use the LINK_XXX conditional define.<br />
+See Demo_LoadPersistenceLayerIfDef or Demo_LoadPersistenceLayerUses.</p>
+<table cellspacing="0" cellpadding="3" border="1">
+<tbody>
+<tr class="Normal">
+<td valign="top" width="150"><p><strong>Persistence</strong></p></td>
+<td valign="top" width="200"><p><strong>Conditional</strong></p></td></tr>
+<tr class="Normal"><td>tiQueryXML</td><td>LINK_XML</td></tr>
+<tr class="Normal"><td>tiQueryIBX</td><td>LINK_IBX</td></tr>
+<tr class="Normal"><td>tiQueryBDEParadox</td><td>LINK_BDEPARADOX</td></tr>
+<tr class="Normal"><td>tiQueryADOAccess</td><td>LINK_ADOACCESS</td></tr>
+<tr class="Normal"><td>tiQueryADOSQLServer</td><td>LINK_ADOSQLSERVER</td></tr>
+<tr class="Normal"><td>tiQueryCSV</td><td>LINK_CSV</td></tr>
+<tr class="Normal"><td>tiQueryTAB</td><td>LINK_TAB</td></tr>
+<tr class="Normal"><td>tiQueryXMLLight</td><td>LINK_XMLLIGHT</td></tr>
+<tr class="Normal"><td>tiQueryDOA</td><td>LINK_DOA</td></tr>
+<tr class="Normal"><td>tiQueryRemote</td><td>LINK_REMOTE</td></tr>
+<tr class="Normal"><td>tiQuerySqldbIB</td><td>LINK_SQLDB_IB</td></tr>
+<tr class="Normal"><td>tiQuerySqldbPQ</td><td>LINK_SQLDB_PQ</td></tr>
+<tr class="Normal"><td>tiQueryFBL</td><td>LINK_FBL</td></tr>
+<tr class="Normal"><td>tiQueryZeosIBFB</td><td>LINK_ZEOS_FB</td></tr>
+</tbody>
+</table>
+<p>&nbsp;</p>
+<h1>ADVANCED TOPICS</h1>
+<h2 class="Normal">How do I encapsulate and associate objects?</h2>
+<p>Encapsulation is normally done by including an object or object list inside another.</p>
+<p>A one to many relationship can be modelled by including a TtiObjectList containing the children, inside the parent. Alternately, the child can contain an instance of the parent.</p>
+<p>A third possibility is to store just the OID of the associated object. This is useful when access to the object itself is not required.</p>
+<p>If the encapsulated object is published, then it will be saved and loaded together with it's owner. If it is public, then the saving and loading will need to be handled in code.</p>
+<p>Examples from MastApp:<br />
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+TOrder = class(TtiObject) 
+  private
+  ...
+  published 
+  //  property OID;
+    property OrderNo: integer read GetOrderNo;  // resurfaces OID so we can get at it in the lists
+    property CustNo: TOID read GetCustNo write SetCustNo; 
+    property SaleDate: TDateTime read FSaleDate write FSaleDate; 
+    property ShipDate: TDateTime read FShipDate write FShipDate; 
+    property EmpNo: TOID read GetEmpNo write SetEmpNo;
+    ...
+    property OrderItems: TOrderItems read FOrderItems;  // one order owns many items
+  end;
+
+  TOrderItem = class(TtiObject) 
+    private
+      ...
+      function GetDescription: string;
+      function GetPart: TPart;
+      procedure SetPartNo(const Value: double);
+      function GetListPrice: Currency;
+      function GetTotalPrice: Currency;
+    protected 
+      FOrderNo: TOID; 
+      FPartNo: double; 
+      FPart: Tpart; 
+      function GetCaption: string; override; 
+      procedure AssignClassProps(ASource: TtiObject); override; 
+    public
+      ...
+      property Part: TPart read GetPart; // encapsulated object � one part to many items 
+      property Description: string read GetDescription; 
+      property ListPrice: Currency read GetListPrice; 
+      property TotalPrice: Currency read GetTotalPrice; 
+    published 
+      property OrderNo: TOID read GetOrderNo write SetOrderNo; // OID of the owner object
+      // need the following to provide db access to PartNo 
+      property PartNo: double read FPartNo write SetPartNo;
+      ...
+    end;
+    
+    function TOrderItem.GetPart: TPart; 
+    begin 
+      if not assigned(FPart) then 
+      begin
+        FPart:= TPart.Create;
+        // FPart.OID.Assign(PartNo);
+      end;
+      if FPart.ObjectState = posEmpty then
+      begin
+        FPart.OID.AsString:= FloatToStr(FPartNo);
+        FPart.Read();
+      end;
+      result:= FPart; 
+    end; 
+    
+    procedure TOrderItem.SetPartNo(const Value: double); 
+      begin 
+        if FPartNo &lt;&gt; Value then 
+        begin
+          FPartNo:= Value;
+            if assigned(FPart) then FPart.ObjectState:= posEmpty;
+        end;
+      end;
+</textarea></p>
+<p>&nbsp;</p>
+<h2 class="Normal">Visitors</h2>
+<p>tiOPF uses the Visitor pattern extensively. Reading and Saving objects is done using visitors. An in depth knowledge of visitors is not required to use tiOPF successfully.</p>
+<p>An executive summary is as follows:<br />
+Visitor objects iterate over a collection of objects and perform an operation on each acceptable object. In tiOPF terms, visitors descend from TtiVisitor and operate on descendants of TtiObject (this includes TtiObjectList).</p>
+<h2 class="Normal">Important features of TtiVisitor are:</h2>
+<p>Visited Property - the object currently being operated on.<br />
+AcceptVisitor virtual method - used to determine if the Visited object should be operated on.<br />
+Execute virtual method - that actually performs the operation on Visited.</p>
+<p>For more information, see chapter 2 of the concepts manual.</p>
+<p>&nbsp;</p>
+<h2 class="Normal">Persistence mapping</h2>
+<p>As mentioned, there are 3 types of persistence mapping, AutoMapping, DB Independent Visitors and Hard Coded Visitors. Automapping will work with both flat files (xml, csv etc) and databases. DB Independent and hard Coded will only work with databases.</p>
+<p>Most demos allow you to choose the mapping on start up so you can compare them.</p>
+<p>&nbsp;</p>
+<dl>
+<dt><b>Automapping:</b></dt>
+<dd>Automapping is the simplest persistence mapping. Simply call;<br />
+gTIOPFManager.ClassDBMappingMgr.RegisterMapping for each field to be persisted,<br />
+and call<br />
+gTIOPFManager.ClassDBMappingMgr.RegisterCollection for each collection object.<br />
+this is done once, at start up.
+<p>Example from Demo_Collection<br />
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+// Class, Table, Property, Column, Special Info
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping(TClient, 'Client', 'OID', 'OID', [pktDB]);
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping(TClient, 'Client', 'ClientName', 'Client_Name' );
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping(TClient, 'Client', 'ClientID', 'Client_ID' );
+  gTIOPFManager.ClassDBMappingMgr.RegisterCollection(TClients, TClient);
+</textarea></p>
+<p>&nbsp;</p>
+</dd>
+<dt><b>DB Independent Visitors:</b>
+</dt>
+<dd>DB Independent Visitors (DBIV) require creating 4 visitors for each class to be persisted; read, create, update and delete visitor objects. These objects need to be registered at start up. This provides more control than automapping at the cost of considerably more code.
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+TVisClient_Read = class(TVisDBAutoGenRead) 
+  protected 
+    function AcceptVisitor: boolean; override; 
+    procedure Init ; override; 
+    procedure SetupParams ; override; 
+    procedure MapRowToObject; override; 
+  end; 
+  
+  TVisClient_Create = class(TVisDBAutoGenUpdate) 
+  protected 
+    function AcceptVisitor: boolean; override; 
+    procedure SetupParams ; override; 
+  end; 
+  
+  TVisClient_Update = class(TVisDBAutoGenUpdate) 
+  protected 
+    function AcceptVisitor: boolean; override; 
+    procedure SetupParams ; override; 
+  end; 
+  
+  TVisClient_Delete = class(TVisDBAutoGenDelete) 
+  protected 
+    function AcceptVisitor: boolean; override; 
+    procedure SetupParams ; override; 
+  end;
+</textarea>
+<p>See Demo_Collection, Client_DBIndependentVisitors_Svr.pas for implementation details.</p>
+<p>Under the hood, the visitors create a sql statement based on the parameters supplied (table name and field names).<br />
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+function TVisClient_Create.AcceptVisitor: boolean; 
+  begin
+    result:= (Visited is TClient) and (Visited.ObjectState = posCreate); 
+    Log([ClassName, Visited.ClassName, Visited.ObjectStateAsString, Result ]);
+  end;
+  
+  procedure TVisClient_Create.SetupParams; 
+  var 
+    LData: TClient; 
+  begin 
+    LData:= Visited as TClient; 
+    TableName:= 'Client'; 
+    QueryType:= qtInsert; 
+    QueryParams.SetValueAsString('OID', LData.OID.AsString); 
+    QueryParams.SetValueAsString('Client_Name', LData.ClientName); 
+    QueryParams.SetValueAsString('Client_ID', LData.ClientID); 
+  end;
+</textarea></p>
+The advantage over automapping is that you have more control over the makeup of the sql.<br />
+&nbsp;</dd>
+<dt><b>Hard Coded Visitors</b>
+</dt>
+<dd>Hard Coded Visitors also require the creation and registration of 4 visitors. However, they simply provide an empty Query object, and creation of the sql is left to the developer.
+<textarea class="delphi:nogutter:nocontrols" style="DISPLAY: none" name="code" rows="20" cols="75">
+TVisClient_Read = class(TVisOwnedQrySelect) 
+  protected 
+    function AcceptVisitor: boolean; override; 
+    procedure Init ; override; 
+    procedure SetupParams ; override; 
+    procedure MapRowToObject; override; 
+  end; 
+  
+  TVisClient_Create = class(TVisOwnedQryUpdate) 
+  protected 
+    function AcceptVisitor: boolean; override; 
+    procedure Init ; override; 
+    procedure SetupParams ; override; 
+  end; 
+  
+  TVisClient_Update = class(TVisOwnedQryUpdate) 
+  protected 
+    function AcceptVisitor: boolean; override; 
+    procedure Init ; override; 
+    procedure SetupParams ; override; 
+  end; 
+  
+  TVisClient_Delete = class(TVisOwnedQryUpdate) 
+  protected 
+    function AcceptVisitor: boolean; override; 
+    procedure Init ; override; 
+    procedure SetupParams ; override; 
+  end;
+  
+  ...
+  
+  function TVisClient_Create.AcceptVisitor: boolean; 
+  begin 
+    result:= (Visited is TClient) and (Visited.ObjectState = posCreate); 
+    Log([ClassName, Visited.ClassName, Visited.ObjectStateAsString, Result ]); 
+  end; 
+  
+  procedure TVisClient_Create.Init; 
+  begin 
+    Query.SQLText:= 'Insert into Client (OID, Client_Name, Client_ID) ' + 
+                              'Values ' + '(:OID,:Client_Name,:Client_ID)';
+  end; 
+  
+  procedure TVisClient_Create.SetupParams; 
+  var 
+    lData: TClient; 
+  begin 
+    lData:= Visited as TClient; 
+    lData.OID.AssignToTIQuery('OID', Query); 
+    Query.ParamAsString['Client_Name']:= lData.ClientName; 
+    Query.ParamAsString['Client_ID']:= lData.ClientID;
+  end;
+</textarea>
+<p>HCV should be used when you need precise control of the sql, or when you sql doesn't fall into the "Select * from ..." Table mould.</p>
+</dd>
+</dl>
+<p>&nbsp;</p>
+<h2 class="Normal">Which persistence mapping should I use?</h2>
+<p>For flat files (xml etc), use automapping.</p>
+<p>Both Automapping and DBIV use "Select * from ..." queries, so if this is not suitable (bringing back too many unwanted fields) then use HCV.</p>
+<p>Otherwise the difference in coding required is such that you are best off starting with automapping and then replacing it as required.</p>
+<p><b>Note:</b> it is possible to mix and match. E.g. use a HCV to select the data and then use Automapping to perform the updates.</p>
+<p>&nbsp;</p>
+<table cellspacing="0" cellpadding="3" border="1">
+<tbody>
+<tr class="Normal">
+<td valign="top" width="210"><p><strong>Feature required</strong></p></td>
+<td valign="top" width="130"><p><strong>Automapping</strong></p></td>
+<td valign="top" width="130"><p><strong>DB Independent</strong></p></td>
+<td valign="top" width="130"><p><strong>Hard Coded</strong></p></td>
+</tr>
+<tr class="Normal">
+<td>Flat files</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr class="Normal">
+<td>Use stored procedures</td>
+<td>No</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr class="Normal">
+<td>Swap databases easily</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Maybe</td>
+</tr>
+<tr class="Normal">
+<td>Control over sql</td>
+<td>No</td>
+<td>Limited</td>
+<td>Complete</td>
+</tr>
+<tr class="Normal">
+<td>Performance</td>
+<td>None</td>
+<td>Limited</td>
+<td>Complete</td>
+</tr>
+</tbody>
+</table>
+<p>&nbsp;</p>
+<p>More to come ... please stay tuned.</p>
+<p>&nbsp;</p>
+<!--#include virtual="/Shared/Footer.html"-->
+</body>
+</html>

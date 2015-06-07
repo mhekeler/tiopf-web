@@ -1,0 +1,252 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>tiOPF Documentation - What is an object persistence framework?</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>1. What is an OPF?</h1> 
+<h1>Introduction</h1>
+<p>In this chapter we look at what an object persistence framework (OPF) is and how it can help you build better business applications. We examine some of the problems inherent in applications that are built using the RAD (rapid application design) approach that Delphi encourages, and examine how an OPF can help reduce these problems.</p>
+<p>We take a look at the design requirements of an OPF as specified by the Jedi-Obiwan project (an open source project to build the ultimate OPF for Delphi), and Scott Ambler (a respected writer on the subject of OPFs). We will contrast these requirements with the design of the TechInsite OPF and see how the framework addresses (or fails to address) these requirements.</p>
+<p>The next section of this chapter discusses some of the problems with using Delphi&rsquo;s RAD approach to build complex business applications. We then have a high level look at some of the requirements of an OPF and see who the current version of the tiOPF meets (or fails to meet) these requirements.</p>
+<h2>RAD vs OPF</h2>
+<p>(Rapid Application Design vs Object Persistence Framework) There is no question that the tools that come with Delphi can be used to build a database application very, very quickly. The power of the combination of the BDE Alias, TDatabase, TQuery, TDataSource and TDBEdit is incredible. The problem is that with every TDatabase or TQuery you drop on a TDataModule, you have tied yourself more closely to the BDE. With every TDBEdit added to a form, you have coupled yourself to that particular field name in the database.</p>
+<p>The alternative is to roll your own persistence layer. This is hard work and will cost you hundreds of hours of work before it comes close to matching the functionality of what comes out of the box with Delphi. However, if the business case justifies this work, then the results can be stable, optimised, versatile and extremely satisfying to build.</p>
+<h2> Three ways to build an application</h2>
+<p>Consider this statement: There are three possible ways to build an application: </p>
+<p><strong>RAD &ndash; Rapid Application Design</strong>. The process of dropping data access components onto a TDataModule, and hooking them up to data aware controls like the TDBGrid and TDBEdit at design time. Good for simple applications, but if used for complex programs, can lead to an unmaintainable mess of spaghetti code.</p>
+<p><strong>OPF &ndash; Object Persistence Framework.</strong> Design a business object model using UML modeling techniques, the implement the model by descending business classes from your own abstract business object and abstract business object list. Write a family of controls to make building GUIs easier, then design some mechanism for saving these objects to a database, and reading them back again.</p>
+<p><strong>Hybrid &ndash; Using RAD techniques, but adding a middle layer.</strong> Continue using the best of what RAD can offer (the huge selection of GUI controls that are available), but implement some sort of mddle layer using Delphi&rsquo;s components as they come out of the box. The TClientDataSet that comes with Delphi 5 Enterprise is a prime candidate as the starting point for this middle layer.</p>
+<p>The rest of this chapter discusses the pros and cons of RAD and OPF, then the rest of this document discusses the implementation of an OPF. A chapter on using the hybrid approach would be worth wile and is on my personal to do list.</p>
+<h2>Four problems with RAD business applications</h2>
+<p>A couple of month ago there was a discussion on the Australian Delphi User Group&rsquo;s (www.adug.org.au) mailing list on the topic of developing your own persistence framework, versus using RAD and data aware controls. Many posts to the mailing list where made and everyone seamed to have a strong opinion one way or the other. Delphi developers either love RAD and hate OPF, or hate RAD or love OPF. Several argued that the hybrid approach was worth a look but the argument was generally polarised. As the discussion on the list continued, most agreed that there was a place for RAD and data aware controls in single tier file based applications, or client server prototypes. Most of the experienced client/server developers who contributed to the discussion agreed that there was no room for RAD and data aware controls in sophisticated client server applications.</p>
+<p>Here are four problems with RAD and data aware controls.</p>
+<ol>
+  <li><strong>Tight coupling to the database design.</strong> One of the biggest problems with using RAD and data aware controls is that the database layer is very tightly coupled to the presentation layer. Any change to the database potentially means that changes must be made in many places throughout the application. It is often hard to find where these changes must be made as the link from the data aware controls in the application to the database are made with published properties and the object inspector. This means that the places to make changes can not be found with Delphi&rsquo;s search facility. When data aware controls are used, the amount of checking by the compiler of you code is reduced. This means that some bugs may not be detected until run time, or may not be detected at all until the user navigates down a path the developer did not foresee. Developing a persistence framework allows you to refer a data object&rsquo;s values by property name rather than by using a DataSet&rsquo;s FieldByName method. This gives greater compile time checking of the application and leads to simplified debugging.<br>
+  </li>
+  <li><strong>RAD and data aware controls create more network traffic.</strong> It is a simple exercise to drop a few data aware controls on a form, connect them to a TDataSource, TQuery and TDatabase then load the DBMonitor (C:\Program Files\Borland\Delphi4\Bin\sqlmon.exe) and to watch the excess network traffic they create.<br>
+  </li>
+  <li><strong>Tight coupling to vendor specific database features.</strong> At the simplest level, all databases accept the same SQL syntax. For example a simple, select * from customers will work for all the systems I have come across. As you become more sophisticated with your SQL, you will probably want to start using some special functions, a stored procedure or perhaps an outer join, which will be implemented differently by each database vendor. Data aware controls make it difficult to build your application so it can swap database seamlessly.<br>
+  </li>
+  <li><strong>Tight coupling to a data access API.</strong> The BDE allows us to swap aliases when you want to change databases, but what if you want to switch from BDE data access, to ADO, IBObjects, Direct Oracle Access (DOA), ClientDataSet or our own custom data format? (This is not the fault of the data aware controls, but is still a problem with the component-on-form style of developing.) A custom persistence framework can be designed to eliminate this tight coupling of an application to a data access API.</li>
+  </ol>
+<p><span class="Heading_PageTitle">Summary: RAD vs. OPF</span></p>
+<table border="1" cellspacing="1" cellpadding="1">
+  <tr class="Normal">
+    <td width="121" valign="top"><p><strong> &nbsp;</strong></p></td>
+    <td width="149" valign="top"><p><strong> Advantages </strong></p></td>
+    <td width="173" valign="top"><p><strong> Disadvantages </strong></p></td>
+    <td width="149" valign="top"><p><strong> When do I use? </strong></p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="121" valign="top"><p><strong> Data aware controls </strong></p></td>
+    <td width="149" valign="top"><ul>
+        <li> Good for prototypes. </li>
+        <li> Good for simple, single tier apps. </li>
+        <li> Good for seldom used forms, like one-off setup screens that may be used to populate a new database with background data. </li>
+    </ul></td>
+    <td width="173" valign="top"><ul>
+        <li> Higher maintenance and debugging costs. </li>
+        <li> Higher network traffic. </li>
+        <li> Limited number of data aware controls in Delphi (but plenty if you use InfoPower or other libraries) </li>
+        <li> Can not be used to edit custom file formats, registry entries or data that is not contained in a TDataSet. </li>
+        <li> Harder to develop your own data aware controls than regular controls. </li>
+        <li> Difficult to make work when the database does not map directly into the GUI ie, a well normalised database. </li>
+        <li> Difficult to make extensive reuse of code. </li>
+    </ul></td>
+    <td width="149" valign="top"><ul>
+        <li> Low end customers (small businesses with few user). </li>
+        <li> Throw away prototypes. </li>
+        <li> Data maintenance apps that my customers will not see. </li>
+        <li> Systems where I have total control over the database design. </li>
+        <li> When the user wants the app to look and perform as if it were written in VB. </li>
+    </ul></td>
+  </tr>
+  <tr class="Normal">
+    <td width="121" valign="top"><p><strong> Persistence framework </strong></p></td>
+    <td width="149" valign="top"><ul>
+        <li> Good for complex applications. </li>
+        <li> Lower network traffic. </li>
+        <li> Lower total cost of ownership. </li>
+        <li> When the database is storing non text data like multi-media, or perhaps scientific data which must be manipulated with complex algorithms. </li>
+        <li> Decouple GUI from database. </li>
+      </ul>
+        <p>&nbsp; </p></td>
+    <td width="173" valign="top"><ul>
+        <li> More skilled development team. </li>
+        <li> Higher up front development cost. </li>
+        <li> Many reporting tools take input from a TDataSet. Some extra code would be needed to connect the persistence framework to the reporting tool. </li>
+        <li> Must re-build what comes out of the box with Delphi . </li>
+    </ul></td>
+    <td width="149" valign="top"><ul>
+        <li> High end (corporate) customers with many users where performance is important. </li>
+        <li> Systems that have complex data models that I have little control over. </li>
+        <li> Systems that require a TreeView, ListView look and feel. </li>
+        <li> Systems that must be database vendor independent. </li>
+    </ul></td>
+  </tr>
+</table>
+<h2>Some technical requirements of an OPF</h2>
+<h2>Source of information</h2>
+<p>These design notes have been taken from two sources:</p>
+<p>&bull; The Jedi-Obiwan project, to build an open source object persistence framework in Delphi; and</p>
+<p>&bull; Scott Ambler&rsquo;s writings on object persistence frameworks.</p>
+<p>These sources combine to give a much more comprehensive overview of the requirements of an OPF than I could write. In each case, the design requirement is listed (in normal font), then some notes on how the tiOPF addresses (or fails to address) this requirement is made in <em>Italics</em>.</p>
+<h2>How the tiOPF compares with Jedi-Obiwan OPF requirements</h2>
+<p>The specification, along with other design and discussion documents, and a mailing list for the Jedi-Obiwan project can be joined at <a href="mailto:jedi-obiwan-subscribe@yahoogroups.com">mailto:jedi-obiwan-subscribe@yahoogroups.com</a></p>
+<ol>
+  <li><strong> Object Persistence.</strong> The framework must allow for the storage and retrieval of data as objects. The framework must support the storage and retrieval of complex objects, including the relationships - e.g. inheritance, aggregation and association - between different objects.<br>
+    <br>
+    <em>The storage and retrieval of data as objects, with their relationships such as inheritance, aggregations and association is well met.</em><br>
+  </li>
+  <li><strong>Object Querying.</strong> The framework must provide a mechanism for querying the object storage and retrieving collections of objects based on defined criteria. The framework must support a standard object querying language &ndash; e.g. Object Constraint Language (OCL) [5] or Object Query Language (OQL) [6].<br>
+    <br>
+    <em>Querying is supported at two levels. A group of objects can be retrieved from a database using what ever query language the database used (eg SQL). Once a list of objects has been read, there are methods on the abstract list class which allow filtering and querying. This filtering and querying can be achieved in two ways. A query class can be created to scan for matches; or a query can be run using RTTI to extract a property value by name and compare it to a passed parameter.</em><br>
+    <br>
+    <em>There is no OCL beyond what is described above.</em><br>
+  </li>
+  <li><strong>Object Identity.</strong> All objects persisted within the framework must be uniquely identified using an Object IDentifier (OID). OIDs must be supported within legacy environments and as such the OID mechanism must be sufficiently flexible enough to used to identify data objects even when the underlying storage mechanism doesn&rsquo;t explicitly support such identification.<br>
+    <br>
+    <em>The abstract base persistent object has a property, OID of type TOID. In the framework, this is an Int64, which means the second part of this requirement is not met. An OID factory would have to be introduced. This suggests all objects must support the IOID interface, or descend from a parent class with OID as a property.</em><br>
+  </li>
+  <li><strong> Transactions.</strong> The framework must support transactions, satisfying the ACID Test set out by the Object Management Group [ http://www.omg.org ]. A transaction should be Atomic (i.e. it either happens completely or doesn&rsquo;t happen at all), its result should be Consistent, Isolated (independent of other transactions) and Durable (its effect should be permanent).<br>
+    <br>To this end the framework must support the same sort of object transaction operations as the operations found in typical SQL databases implementations, e.g. Commit, Rollback, etc.<br>
+    <br>
+    The framework supports transactions as provided by a SQL database. For example, you can make some changes to a group of objects and attempt to save them to the database. If the database commit is successful, the objects&rsquo; state will be set from dirty, back to clean. If the commit is not successful, the objects&rsquo; state will not be changed so further editing can take place. <br>
+    <br>
+    This is a kind of two phase commit.<br>
+    <br>
+    <em>There is no support for transactions beyond what is provided by the SQL database being used for the persistence.</em><br>
+  </li>
+  <li><em>XML Data Sources.</em> The framework must be able to persist data object in repositories other than SQL databases. In particular the framework must support the storage and retrieval of data objects from XML files.<br>
+    <br>    
+    <em>XML Data sources are well supported.</em> <br>
+  </li>
+  <li><strong> Legacy Data.</strong> The framework must provide mechanisms for converting data stored in legacy databases into data objects useable by Delphi applications, as well as be able to store data objects within legacy systems. <br>
+    <br>
+    The framework may also provide mechanisms for persisting legacy business objects &ndash; that is, business objects that predate the existence of the framework. In this case the framework may require some modification of existing business objects but this must not be onerous.<br>
+    <em><br>
+    Support for legacy databases is excellent. The developer has full control over how objects and databases are mapped.</em><br>
+  </li>
+  <li><strong> Heterogeneous Data Sources.</strong> The framework must be able to work with data objects from a variety of data sources at run time. The representation of business objects in repositories must be independent from the business objects themselves, in that on object in one data repository stored in one repository may be stored in an alternative repository without any changes apparent to the object from the perspective of the application using it.<br>
+    <br>The framework must be able to work with data objects of the same class existing in separate repositories. The framework should also enable the association of data from heterogeneous sources, i.e. data from a variety of legacy or new database systems.<br>
+    <br>
+    <em>The tiOFP allows for multiple persistence layers (or different types of database) to be connected at the same time. There may be several instances of each database type loaded at the same time. </em><br>
+  </li>
+  <li> <strong>Reporting Tools.</strong> The framework must support conventional reporting technologies, either by providing supporting classes for common reporting tools (e.g. ReportBuilder) or by storing data using database schemas that are readily accessible by reporting tools.<br>
+    <br>
+    <em>Export of a collection of objects to HTML, XML and CSV is provided via the XML and CSV persistence layers. There is also the TtiDataSet wrapper that makes a tiOPF list of objects look like a TDataSet.</em> <br>
+  </li>
+  <li>      <strong>Versioning and Version Migration.</strong> The framework may support the versioning of objects, that is to say: the framework may allow for different versions of the same class of business object to be maintained within the same repository.<br>
+      <br>
+      The framework must support the migration of data when class interfaces change (e.g. when a new version of an application is released). The framework must support the process of modifying existing data to fit updated business object metadata.<br>
+      <em><br>
+      Object versioning is possible when coded by the developer.</em><br>
+  </li>
+  <li><strong> Performance Optimizations.</strong> The framework must be able to be optimized. That is, in performance critical environments where the knowledge of a skilled DBA is required for an application to perform successfully, repository-based optimizations must be available to applications using the framework.<br>
+    <br>
+    <em>This requirement is well met. The developer can either use the auto generated SQL framework, or can code the SQL himself. This can become quite complex as managing the persistence of a single object takes four SQL statements (Create, Read, Update, Delete), and four persistence classes to handle the mapping between the object to be saved. This is simplified by using a tool called the tiSQLManager, which is used to store the SQL in the database. A family of classes is written to interact with this SQL that has been abstracted out of the application.</em><br>
+</li>
+  <li><strong> Separation of Business Logic and User Interface.</strong> The framework must separate user-interface and business logic code, clearly defining the points of integration between the two. Its design must take on a &ldquo;layered&rdquo; approach, where high-level complex functionality builds upon simpler, lower level services.<br>
+    <br>
+    <em>Business logic, presentation logic and the persistence layer are strictly separated. For example, if we have a TCustomer class, there will probably be a unit called Customer_BOM.pas (for business logic), Customer_Cli.pas (for client side, presentation logic) and Customer_Srv.pas (for persistence logic).</em><br>
+  </li>
+  <li><strong> Separation of Object Data and Object Metadata.</strong> Object metadata must be stored within the framework (i.e. within a supported repository) and not encapsulated within the business objects themselves.<br>
+    <br>
+    <em>There has been little attempt to separate meta data. Extensive use is made of RTTI if meta data is required. There has been one situation where I required automatically generated SQL, so there are a family of classes which map classes to tables and properties to fields.</em><br>
+  </li>
+  <li> <strong>Object Data Standard Compliance.</strong> Developers of the framework may elect to design the framework to meet the compliance requirements of the ODMG&rsquo;s Object Data Standard 3.0 [6]. It is possible that ODS compliance may be implemented as an extension to the framework, but neither this, nor compliancy in general has been decided.<br>
+    <br>
+    <em>No.</em><br>
+  </li>
+  <li><strong> Operating Environment.</strong> The framework must support persistence under a variety of deployment models, specifically Standalone, Client-Server and n-Tier.<br>
+    <em><br>
+    Yes.</em><br>
+  </li>
+  <li><strong> Database Schemas / Multi-vendor Databases.</strong> The nature of the framework must allow for any number of database schemas to be used and so must be extensible enough to allow end-users (Delphi developers) to extend the system to match their own persistence requirements. Default schemas may be defined for illustrative, testing or typical persistence requirements but should not be considered the only schemas usable within the framework. <br>
+    <br>
+    While arguments for a &ldquo;pure&rdquo; (i.e. database-vendor neutral) persistence solution carry weight, the performance cost and legacy-data issues outweigh any gains enjoyed from having a single, simple implementation. Given that the framework must be extensible by third parties there is nothing preventing the implementation of a vendor-neutral extension to the framework, along with the vendor-specific implementations that will also be developed.<br>
+    <em><br>
+    Yes. Currently we have Oracle via DOA, Paradox via BDE, Interbase via IBObjects, and multi tier via HTTP and a custom ISAPI DLL. To write another persistence flavor, clone the code from one of the above, modify and recompile into a new package which gets loaded at startup.</em><br>
+    </li>
+  </ol>
+<h2>How the tiOPF compares with Scott Ambler&rsquo;s requirements</h2>
+<p>The following 14 requirements where lifted from his paper on object persistence frameworks: &lsquo;The design of a robust persistence layer for relational databases&rsquo; which can be found in full at <a href="http://www.ambysoft.com/persistenceLayer.pdf">http://www.ambysoft.com/persistenceLayer.pdf</a></p>
+<ol>
+  <li><strong>Several types of persistence mechanism.</strong> A persistence mechanism is any technology that can be used to permanently store objects for later update, retrieval and/or deletion. Possible persistence mechanisms include flat files, relational databases, object-relational databases, etc. Scott&rsquo;s paper concentrates on the relational aspect of persistence layers.<br>
+    <br>
+    <em>This requirement is partially met. The tiOPF is optimised for object RDBMS mapping, and is currently being extended to support flat file and XML persistence layers. This, however is not a trivial task because in the process of optimising the framework for OO-RDBMS mapping, we have boxed our selves into a design corner which is making it difficult to create a persistence layer that maps to a not SQL database.</em><br>
+  </li>
+  <li> Full encapsulation of the persistence mechanism(s). Ideally you should only have to send the messages save, delete and retrieve to an object to save it, delete it or retrieve it respectively. That&rsquo;s it, the persistence layer takes care of the rest. Furthermore, except for well-justified exceptions, you shouldn&rsquo;t have to write any special persistence code other than of the persistence layer itself.<br>
+    <br>
+    <em>This requirement is well met, although you do not send a message like save or retrieve to the object, you pass the object to the persistence manager and ask it to handle the saving.<br>
+    <br>
+    For example, you do not call: FMyObject.Save ; <br>
+    but rather gPerMgr.Save( FMyObject ) ;</em><br>
+  </li>
+  <li><strong> Multi-object actions.</strong> Because it is common to retrieve several objects at once, perhaps for a report or as the result of a customised search, a robust persistence layer must be able to support the retrieval of many objects simultaneously. The same can be said of deleting objects from the persistence mechanism that meet specific criteria.<br>
+    <em><br>
+    This requirement is well met. You can make a call like gPerMgr.Read( FPeople ) where FPeople is an empty list which will hold 0..n TPerson(s)<br>
+    <br>
+    You can also make calls like FPeople.Delete which will mark all the TPerson(s) in the list for deletion. When gPerMgr.Save( FPeople ) is called, all the TPerson(s) marked for deletion will be removed from the persistence store.</em><br>
+</li>
+  <li> <strong>Transactions.</strong> Related to requirement #3 is the support for transactions, a collection of actions on several objects. A transaction could be made up of any combination of saving, retrieving, and/or deleting of objects. Transactions may be flat, an &lsquo;all-or-nothing&rsquo; approach where all the actions must either succeed or be rolled back (cancelled), or they may be nested, an approach where a transaction is made up of other transactions which are committed and not rolled back if the last transaction fails. Transactions also be short-lived, running in thousandths of a second, or ling-lived, taking hours, days, or weeks, or even months to complete.<br>
+    <br>
+    <em>This requirement is partially met. Transactions are supported if the persistence mechanism supports them. (ie a RDBMS). A single transaction will be supported per call to the persistence layer. For example, all objects being saved in a call to gPerMgr.Save(FPeople) will be saved in the same transaction. If one fails to save, none will be saved. The abstract business object has a property ObjectState which indicates if an object is clean (it does not need to be saved) or dirty, (it must be created, updated or deleted) A single transaction can exist between the objects and the database. The is no support for inter object transactions, or object-GUI transactions.</em><br>
+  </li>
+  <li><strong>Extensibility.</strong> You should be able to add new classes to your object application and be able to change persistence mechanisms easily (you can count on at least upgrading your persistence mechanism over time, if not port to one from a different vendor). In other words your persistence layer must be flexible enough to allow your application programmers and persistence mechanism administrators to each do what they need to do.<br>
+    <br>
+    <em>Not really sure what Scott is getting at here. It is possible to add new objects to the application (I can&rsquo;t see when it would never be possible).<br>
+    <br>
+    The persistence connection mechanism is wrapped up in a Delphi package which is loaded when the application initialises so changing from one database access API is as easy as loading a different package (BPL)<br>
+    </em> </li>
+  <li><strong> Object identifiers.</strong> An object identifier (Ambler, 1998c), or OID for short, is an attribute, typically a number that uniquely identifies an object. OIDs are the object-oriented equivalent of keys from relational theory, columns that uniquely identify a row within a table.<br>
+    <br>
+    Scott&rsquo;s high-low long integer based OIDs are implemented. There is no support for non integer OIDs and this should probably be a requirement as it makes it difficult to map to many legacy databases.<br>
+  </li>
+  <li> <strong>Cursors.</strong> A persistence layer that supports the ability to retrieve many objects with a single command should also support the ability to retrieve more than just objects. The issue is one of efficiency: Do you really want to allow users to retrieve every single person object stored in your persistence mechanism, perhaps millions all at once? Of course not. An interesting concept from the relational world is that of a cursor. A cursor is a logical connection to the persistence mechanism from which you can retrieve objects using a controlled approach, usually several at a time. This is often more efficient than returning hundreds or even thousands of objects all at once because the user may not need all of the objects immediately (perhaps they are scrolling through a list).<br>
+    <br>
+    <em>There is no support for cursors.</em><br>
+  </li>
+  <li><strong> Proxies.</strong> A complementary approach to cursors is that of a &lsquo;proxy&rsquo;. A proxy is an object that represents other objects but does not incur the same overhead as the object that it represents. A proxy contains enough information for both the computer and the user to identify it and no more. For example, a proxy for a person object would contain its OID so that the application can identify it and the first name, last name and middle initial so that the user could recognise whom the proxy object represents. Proxies are commonly used when the results of a query are to be displayed in a list, from which the user will select only one or two. When users select the proxy object from the list the real object is retrieved automatically form the persistence mechanism, an object that is much later than the proxy. For example, the full person object may include an address and a picture of the person. By using proxies you don&rsquo;t need to bring all of this information across the network for every person in the list, only the information that the user actually wants.<br>
+    <br>
+    <em>The principle discussed here is implemented, but not by using proxies. The abstract business object has a property, ObjectState. One possible ObjectState is posPK, meaning persistent object state &lsquo;Primary Key&rsquo; This means the OID and enough information for a human to navigate a list of the objects has been loaded.</em><br>
+  </li>
+  <li>  <strong> Records.</strong> The vast majority of reporting tools available in the industry today expect to take collections of database records as input, not collections of objects. If your organisation is using such a tool for creating reports within an object-oriented application your persistence layer should support the ability to simply return records as the result of retrieval requests in order to avoid the overhead of converting the database records to objects and then back to records.<br>
+    <br>
+    <em>There is no support for records, although there is a record like family of classes. The easy alternative to this would be to hook into a TClientDataSet, however this was not done to avoid building a dependency on the Enterprise version of Delphi.</em><br>
+  </li>
+  <li> <strong>Multiple architectures.</strong> As organisations move from centralised mainframe architectures to 2-tier client/server architectures to n-tier architectures to distributed objects your persistence layer should be able to support these various approaches. The point to be made is that you must assume that at some point your persistence layer will need to exist in a range of potentially complex environments.<br>
+    <br>
+    <em>This requirement has been moderately well met. There is a remote persistence layer that will pass all calls through the tiDBProxyServer and on to a database. The tiDBProxyServer is a standalone Windows Service (build using TIndyHTTPServer). The service may be recompiled as an ISAPI DLL to run under IIS.</em><br>
+  </li>
+  <li> <strong>Various database versions and/or vendors</strong>. Upgrades happen, as do ports to other persistence mechanisms. A persistence layer should support the ability to easily change persistence mechanisms without affecting the applications that access them, therefore a wide variety of database versions and vendors, should be supported by the persistence layer.<br>
+    <br>
+    <em>This requirement is well met. To connect to a different database or using a different connection API, just load an alternative Delphi package at runtime.<br>
+    </em> </li>
+  <li><strong> Multiple connections</strong>. Most organisations have more than one persistence mechanism, often from different vendors, that need to be accessed by a single object application. The implication is that a persistence layer should be able to support multiple, simultaneous connections to each applications persistence mechanism. Even something as simple as copying an object from one persistence mechanism to another, perhaps from a centralised relational database to a local relational database, requires at least two simultaneous connections, one to each database.<br>
+    <br>
+    <em>Multiple connections to a single database (via database connection pooling), or multiple connections to multiple databases of the same access are possible. Work has been commenced to allow multiple connections to different database types and it will not be too difficult to meet this requirement.</em><br>
+  </li>
+  <li><strong> Native and non-native drivers.</strong> There are several different strategies for accessing a relational database, and a good persistence layer will support the most common ones. Connection strategies include using Open Database Connectivity (ODBC), Active Data Objects (ADO), and native drivers supplied by the database vendor and/or third party vendor.<br>
+    <br>
+    <em>This requirement is well met by swapping runtime packages.</em><br>
+  </li>
+  <li>   <strong>Structured query language (SQL) queries</strong>. Writing SQL queries in your object-oriented code is a fragrant violation of encapsulation &ndash; you&rsquo;ve coupled your application directly to the database schema. However, for performance reasons you sometimes need to do so. Hard-coded SQL in your application should be the exceptions, not the norm, an exception that should be well-justified before being allowed to occur. The persistence layer will need to support the ability do directly submit SQL code to a relational database.<br>
+    <br>
+    <em>Several ways of submitting SQL to the database are possible.<br>
+    <br>
+    The default is for the SQL to be maintained with a tool called the tiSQLManager that stores the SQL in the database. This has many advantages but it does mean the three tiSQLManager tables must exist in the database.<br>
+    <br>
+    SQL can be generated on the fly (this requires work before it could be regarded as production quality)<br>
+    <br>
+    SQL can be hard-coded into the application.</em></li>
+  </ol>
+<p>The next section describes the Visitor framework and can be read <a href="2_TheVisitorFramework.shtml">here</a>. </p>
+
+<!--#include virtual="/Shared/Footer.html"-->
+
+</body>
+</html>

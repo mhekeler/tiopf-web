@@ -1,0 +1,113 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>tiOPF Documentation</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+
+<body>
+
+<!--#include virtual="/Shared/Header.html"-->
+
+<h1>tiOPF Concepts manual</h1>
+
+
+  
+<h2>Topics</h2>
+
+  
+<p class="Heading_Level1">    <a href="1_WhatIsAnOPF.shtml">1. What is an object persistence framework?</a></p>
+
+  
+<p>In this chapter we look at what an object persistence framework
+(OPF) is and how it can help you build better business applications. We
+examine some of the problems inherent in applications that are built
+using the RAD (rapid application design) approach that Delphi
+encourages, and examine how an OPF can help reduce these problems.</p>
+
+  
+<p>We take a look at the design requirements of an OPF as specified by
+the Jedi-Obiwan project (an open source project to build the ultimate
+OPF for Delphi), and Scott Ambler (a respected writer on the subject of
+OPFs). We will contrast these requirements with the design of the
+TechInsite OPF and see how the addresses (or fails to address) these
+requirements. <a href="1_WhatIsAnOPF.shtml">Here</a></p>
+
+  
+<p class="Heading_Level1"> <a href="2_TheVisitorFramework.shtml">2. The Visitor pattern framework</a></p>
+
+  
+<p>So, the aim of this chapter is to come up with a generic way of
+performing a family of related tasks on some of the elements in a list.
+The task we perform may be different depending on the internal state of
+each element. We may not perform any tasks at all, or we may perform
+multiple tasks on multiple list elements. We shall use GoF&rsquo;s
+Visitor pattern to solve this problem and will see how the Visitor can
+be used to save objects to a variety of text file formats. <a href="2_TheVisitorFramework.shtml">Here</a></p>
+
+  
+<p class="Heading_Level1"> <a href="3_TheVisitorAndSQLDatabases.shtml">3. The Visitor and SQL Databases</a></p>
+
+  
+<p>Most business applications use a relational database to save their
+data, so in this chapter we will extend he Visitor framework developed
+in chapter 2 to store our objects in an Interbase database. We shall
+extend the Visitor framework with the Template Method pattern to
+achieve our goal of persisting objects to a relational database. <a href="3_TheVisitorAndSQLDatabases.shtml">Here</a></p>
+
+  
+<p class="Heading_Level1"> <a href="4_BuildingAnAbstractBOMWithTheComposite.shtml">4. Building an abstract business object model with the Composite pattern</a></p>
+
+  
+<p>In chapters two and three, we started to develop an abstract
+collection class, and abstract business object class and we will extend
+these classes in this chapter by adding more of the functionality that
+will be required in a complex business system. <a href="4_BuildingAnAbstractBOMWithTheComposite.shtml">Here</a></p>
+
+  
+<p class="Heading_Level1"> <a href="5_AWorkedExampleOfUsingTheTIOPF.shtml">5. A worked example of using the tiOPF</a></p>
+
+  
+<p>In this chapter we use the framework that can be downloaded as part
+of the tiOPF to build a real life, contact manager application. We will
+use UML to specify the business object model, then design a GUI using
+the TechInsite TPersistent aware controls. We will finish up by looking
+at three strategies for mapping objects to a database using the
+persistence manager that is part of the framework. <a href="5_AWorkedExampleOfUsingTheTIOPF.shtml">Here</a></p>
+
+  
+<p class="Heading_Level1"> <a href="6_TheAdaptorForDatabaseIndependence.shtml">6. Using the Adaptor Pattern for database independence</a></p>
+
+  
+<p>The tiOPF allows you to connect to different databases, using
+different database APIs by simply changing a command line switch. This
+is achieved by wrappering the database connection components like
+TDatabase and TQuery, then using a factory to construct the appropriate
+concrete type of component. This technique is based on the Adaptor
+pattern and is discussed in this chapter. <a href="6_TheAdaptorForDatabaseIndependence.shtml">Here</a></p>
+
+  
+<p class="Heading_Level1"> <a href="7_ReferencesAndFurtherReading.shtml">7. References and further reading</a></p>
+
+  
+<p> This chapter contains the URLs for the latest copy of this
+document, the source code for the tiOPF, as well as the articles and
+papers that have been used as a basis for the tiOPF. The user group,
+mailing lists and tools that helped in the development of the tiOPF are
+also listed. <a href="7_ReferencesAndFurtherReading.shtml">Here</a></p>
+
+  
+<p>Source accompanying this documentation <a href="Source.zip">Here</a> (613Kb)</p>
+
+  
+<p>Power Point presentation: "Rolling your own persistence framework" <a href="RollingYourOwnOPF.ppt">Here</a> (297Kb)</p>
+
+  
+<p class="Heading_Level1"><a href="Appendix1_UsingReportBuilderWithtiOPF.shtml">Appendix 1 . Using ReportBuilder with the tiOPF</a></p>
+
+  
+<p> This chapter was written by Andrew Denton and outlines how to integrate ReportBuilder with the TtiListView or TtiListViewPlus. <a href="Appendix1_UsingReportBuilderWithtiOPF.shtml">Here</a></p>
+
+<!--#include virtual="/Shared/Footer.html"-->
+</body>
+</html>

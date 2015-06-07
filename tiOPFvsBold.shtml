@@ -1,0 +1,49 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>tiOPF vs Bold</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>tiOPF vs Bold</h1>
+<p>This is an extract from a conversation on the Australian Delphi User Group's mailing list:</p>
+<p><i><b>Q: What are the technical advantages of using tiOPF over Bold...so exclude things like cost, ease of use and what-not...<br>
+  </b> <br>
+  </i>In my view the biggest advantage of tiOPF over Bold is the ability to customise your data-access to suit different data base schemas. Bold did introduce a sort of way to do this, but it was less than optimal. Bold requires you to use the Bold generated database structure.<br>
+  <br>
+  Whether this is an issue depends on whether you can specify the db structure your self or not. There are some advantages to being 'locked' out of the schema.<br>
+&nbsp;<br>
+  <b> <i>Can tiOPF integrate with ModelMaker? </i> <br>
+  </b> <br>
+  Not in a higher abstraction way like Bold does. In tiOPF using MM is like using MM with any other Pascal code, the model directly reflects the level of abstraction of the code. In Bold the level of abstraction is higher and the code generator adds all the gory details for you.<br>
+  <br>
+  In my opinion the one of the real hot aspects of Bold over any of the other OPF's I have seen generally available for Delphi is OCL. Having OCL is fantastic and hugely reduces the glue code often found in GUI's or even the domain objects themselves.<br>
+&nbsp;<br>
+  <b> <i>See I really like Bold (just from having a quick play around,&nbsp; and from all that I've read that can be done with it), but being a small software house I don't know if my superiors will be willing to buy the software for only one project... (remember we are a web-development company)....so tiOPF is favourable to the decision makers in that regard...</i><br>
+  </b> <br>
+  Unfortunately the bean counters tend to have trouble with return on investment sometimes. In the scheme of things the cost of D7A is negligible to the whole project cost. If it can improve the reliability, speed of development and maintainability to the value of 100's of man hours what is the actual saving?<br>
+&nbsp;<br>
+  <b> <i>I just need convincing that tiOPF can do a lot of what Bold&nbsp; can do, and I'm sold....</i><br>
+  </b> <br>
+  Basically they are very different beasts. Bold is a lot more than what tiOPF attempts to be, yet tiOPF in its simplicity is more flexible in some areas. Like everything the answer is not black and white. You really need to play with both to see which you prefer. <br>
+  <br>
+  A *massive* advantage of tiOPF is you have the full source. With Bold you *do not* get the core source files, although you do get some of the source. A counter argument with Bold is you get support available from Borland and 3rd party component venders. ( check out www.boldbox.com for some links and products).<br>
+&nbsp;<br>
+  Cheers,<br>
+  <br>
+  Anthony Richardson </p>
+<hr>
+<p>Comparing BOLD with tiOPF is kind of like comparing WordPad with MSOffice. There are time when WordPad will be the right choice, and there are times when everything that MSOffice gives you is required (along with the feature bloat and the huge footprint).</p>
+<p>There are some very cool features that you get with BOLD that will always be beyond the tiOPF, or are buried deep towards the bottom of our to-do list. Some thing that spring to mind (from Anthony&rsquo;s talk on BOLD at the ADUG symposium):</p>
+<p>Real-time synchronisation of GUI with object model.<br>
+  Generate the database from the model<br>
+  Generate the Delphi code from the model</p>
+<p>What the tiOPF does give you is total ownership and control over the framework code. If it can&rsquo;t do what you want it to do &ndash; then change it. (eg, we don&rsquo;t currently have MySQL support as you have requested, but you could write a MySQL persistence layer in about 4 hours). With the tiOPF, it is also possible to interact with a legacy database (or one you have no control over the design of.)</p>
+<p>The tiOPF is also based on some well established principles like the Visitor, Composite and Adaptor patterns &ndash; with a bit of Ambler thrown in. </p>
+<p>A compelling argument for BOLD/ECO over tiOPF might be that the former will add more value to your CV than the latter.</p>
+<p>HTH. </p>
+<p>Peter. </p>
+<!--#include virtual="/Shared/Footer.html"-->
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>tiOPF Documentation  - Appendix 1. Using ReportBuilder with the tiOPF</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>Appendix 1. Using ReportBuilder with the tiOPF </h1> 
+<p class="Normal">This chapter was provided by Andrew Denton adenton@q-range.com after a discussion on the mailing list about reporting techniques and the tiOPF.<br>
+  The following code is taken from a base form in one of my applications that utilises printing a tiListViewPlus (a normal tiListView should work fine also) using Report Builder. Create a form with the following components: -</p>
+<p>A tiListViewPlus (named lvTrans)<br>
+  A TppReport (named rptBase)<br>
+  A TppJITPipeline (named plData)</p>
+<p>Set the ReportUnits property of the report to be utMillimeters &ndash; this is important for the field placement later on. You will also need to attach your tiListView to a TPerObjList descendant. I'm assuming that everyone knows how to do this! Next, create two Private methods in your form declaration as follows: -<br>
+</p>
+<pre>
+Function plCheckEOF : Boolean;
+Function plGetFieldValue(aFieldName : String) : Variant;</pre>
+<p>These are the required event handlers for the pipeline that we need to tell it how to provide the data. Hit CTRL+SHIFT+C for code completion - we will come to these in detail shortly, but we'll leave them blank for now. We also need some kind of UI component to enable the user to request a report, I generally use an action list, but to keep things simple we&rsquo;ll settle for dropping a button on the form. Name the button btnPrint and double-click it to bring up its OnClick event handler. Now comes the coding part! Make your event handler look like this:</p>
+<pre>
+Procedure TfrmTransBase.btnPrintClick(Sender : TObject);
+Const
+  FieldSpacing = 10;
+Var
+  I, OldPos : Integer;
+  MyType : TppDataType;
+  CurXPos : Integer;
+
+Function GetReportFieldSize(FieldType : TppDataType) : Integer;
+Begin
+  Result := 5;
+  Case FieldType Of
+    dtDateTime : Result := 100;
+    dtInteger : Result := 50;
+    dtString : Result := 120;
+    dtCurrency : Result := 60;
+  End; { Case }
+End;
+   
+Procedure AddReportField(Const pFieldName : String; FieldNo : 
+  Integer; FieldType : TppDataType);
+Var
+  lblField1 : TppDBText;
+Begin
+  lblField1 := TppDBText.Create(Self);
+  lblField1.Band := rptBase.DetailBand;
+  lblField1.spLeft := CurXPos;
+  lblField1.spTop := 2;
+  lblField1.DataPipeline := plData;
+  lblField1.AutoSize := False;
+  lblField1.DataField := pFieldName;
+  lblField1.spWidth := GetReportFieldSize(FieldType);
+  If FieldType In [dtCurrency, dtInteger] Then
+    lblField1.Alignment := taRightJustify;
+  CurXPos := CurXPos + lblField1.spWidth + FieldSpacing;
+End;
+
+
+Procedure AddColumnHeading(Const pHeading : String; 
+  FieldNo : Integer; FieldType : TppDataType);
+Var
+  lblHeading1 : TppLabel;
+Begin
+  lblHeading1 := TppLabel.Create(Self);
+  lblHeading1.Band := rptBase.HeaderBand;
+  lblHeading1.spLeft := CurXPos;
+  lblHeading1.spTop := 5;
+  lblHeading1.AutoSize := False;
+  lblHeading1.Caption := pHeading;
+  lblHeading1.Font.Style := [fsBold];
+  lblHeading1.spWidth := GetReportFieldSize(FieldType);
+  If FieldType In [dtCurrency, dtInteger] Then
+  lblHeading1.Alignment := taRightJustify;
+End;
+   
+Begin
+  // Let's create a report.
+  // First we need to interrogate the list view for it's columns so we can 
+  // create the fields and add the fields to the report
+  CurXPos := 2;
+  OldPos := lvTrans.SelectedIndex; // Remember where we were in the list.
+  For I := 0 To lvTrans.ListColumns.Count - 1 Do
+  Begin
+    With lvTrans.ListColumns.Items[I] Do
+    Begin
+      MyType := dtString;
+      Case DataType Of
+      lvtkString : MyType := dtString;
+      lvtkFloat : MyType := dtCurrency;
+      lvtkDateTime : MyType := dtDateTime;
+      lvtkInt : MyType := dtInteger;
+   End; { Case }
+   AddColumnHeading(DisplayLabel, I, MyType);
+   // 25 is a temporary hack value for now.
+   plData.DefineField(FieldName, MyType, 25); 
+   AddReportField(FieldName, I, MyType);
+ End;
+End; { Loop }
+
+// Now we need to hookup the event handlers to the JIT Pipeline to provide 
+// access to the underlying data.
+plData.OnCheckEOF := plCheckEOF;
+plData.OnGetFieldValue := plGetFieldValue;
+// Set the report's title.
+lblReportTitle.Caption := 'Q-Bar Quick Report - ' + Caption;
+// Prevent annoying listview scrolling when preparing report.
+LockWindowUpdate(Self.Handle); 
+// Now all that's done we print the report.
+  Try
+    rptBase.PrintReport;
+  Finally
+  LockWindowUpdate(0); // Now we're good to go.
+End;
+
+If (OldPos &lt;&gt; -1) Then
+  lvTrans.PositionCursor(OldPos)
+  Else
+  lvTrans.PositionCursor(0); // Reset the list view's highlight bar.
+End;</pre>
+<p>Now we&rsquo;ve coded the main printing routine we need to write the code for the event handlers, which looks something like this:
+</p>
+<pre>
+Function TfrmTransBase.plCheckEOF : Boolean;
+Begin
+  Result := (plData.RecordIndex &gt;= lvTrans.Items.Count);
+End;
+   
+Function TfrmTransBase.plGetFieldValue(aFieldName : String) : Variant;
+Var
+  lListColumn : TtiListColumn;
+  lColID : Integer;
+Begin
+  // Need to obtain the value of the property aFieldName from the current 
+  // list item. Using PositionCursor isn't ideal but AFAIK it's the only way of 
+  // accessing the underlying Object.
+  lvTrans.PositionCursor(plData.RecordIndex);
+  If (lvTrans.SelectedData &lt;&gt; Nil) Then
+  Begin
+    lListColumn := lvTrans.ListColumns.FindByFieldName(aFieldName);
+    lColID := lListColumn.ID;
+    If lListColumn.Derived Then
+      Result := lvTrans.Selected.SubItems.Strings[lColID]
+    Else
+      // The magic of RTTI !!! :)
+      Result := GetPropValue(lvTrans.SelectedData, aFieldName)
+  End Else
+    Result := 'Error';
+End;</pre>
+<p>Compile and run your test project and you should now be able to print a report based on the view presented by a tiListView or tiListViewPlus. Couple this with Form Inheritance and you have all your basic reporting functionality already written. Of course, the routines described here could be improved on - most noticeable is the lack of any kind of totalling on the final report, but it should give you an insight into what can be achieved with these two packages.</p>
+<!--#include virtual="/Shared/Footer.html"-->
+</body>
+</html>

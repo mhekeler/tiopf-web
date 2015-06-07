@@ -1,0 +1,238 @@
+body {
+	background-color: #fff;
+	font-family: verdana, tahoma, arial, sans-serif ;
+	text-align: center;
+	width: 600px;
+/*	text-align: left; */
+	margin-left: auto;
+	margin-right: auto;
+}
+
+#pageheader1 {
+	font-family: sans-serif, georgia, 'times new roman';
+	font-size: 26px;
+	padding: 0 0 0 0;
+	margin: 5px 0px 0px 0px;
+}
+
+#pageheader2 {
+	font: bold 11px verdana, tahoma, arial, sans-serif ;
+	padding: 0 0 0 0;
+	margin: 5px 0px 0px 0px;
+}
+
+#Container {
+	width: 600px;
+	text-align: left;
+	margin-left: auto;
+	margin-right: auto;
+	font-family: verdana, tahoma, arial, sans-serif ;
+  font-size: 11px;
+}
+
+#HMenu {
+	text-align: left;
+}
+
+#sidebar {
+	width: 180px;
+	padding: 0 5px 0 5px;
+	margin: 0 0 10px 10px;
+	border: double 4px #CCD9DB;
+	background-color: #D3DEE0;
+	float: right;
+}
+
+
+/* defined as:  id="Footer"   */
+#Footer {
+	font-family: verdana, tahoma, arial, sans-serif ;
+	font-size: 10px;
+	margin-top:      20px;
+	margin-bottom:   20px;
+	padding-top:     5px;
+	padding-bottom:  5px;
+	border-top:      solid 1px #078;
+	border-bottom:   solid 1px #078;
+	text-align:      left;
+}
+
+/* defined as:  class="Heading_PageTitle"   */
+.Heading_PageTitle {
+	font-family: verdana, tahoma, arial, sans-serif ;
+	font-size: 12px;
+	font-weight: bold;
+	margin-top: 20px;
+	margin-bottom: 5px;
+}
+
+h1 {
+	font-family: verdana, tahoma, arial, sans-serif ;
+	font-size: 12px;
+	font-weight: bold;
+	margin-top: 20px;
+	margin-bottom: 5px;
+}
+
+h2 {
+	font-family: verdana, tahoma, arial, sans-serif ;
+	font-size: 12px;
+	font-weight: bold;
+	margin-top: 20px;
+	margin-bottom: 5px;
+}
+
+.Heading_Level1 {
+	font-family: verdana, tahoma, arial, sans-serif ;
+	font-size: 11px;
+	font-weight: bold;
+	margin-top: 20px;
+	margin-bottom: 5px;
+	color: red
+	
+}.EmailAddress {
+	font-family: verdana, tahoma, arial, sans-serif ;
+	font-style: italic;
+	text-decoration: underline;
+}
+
+.Heading_PageTitle {
+	font-family: verdana, tahoma, arial, sans-serif ;
+	font-size: 12px;
+	font-weight: bold;
+	margin-top: 20px;
+	margin-bottom: 5px;
+}
+
+.Heading_Level1 {
+	font-family: verdana, tahoma, arial, sans-serif ;
+	font-size: 11px;
+	font-weight: bold;
+	margin-top: 20px;
+	margin-bottom: 5px;
+}
+.Normal {
+	font-family: verdana, tahoma, arial, sans-serif ;
+	font-size: 11px;
+}
+
+p {
+	font-family: verdana, tahoma, arial, sans-serif ;
+	font-size: 11px;
+}
+
+ol {
+	font-family: verdana, tahoma, arial, sans-serif ;
+	font-size: 11px;
+}
+
+ul {
+	font-family: verdana, tahoma, arial, sans-serif ;
+	font-size: 11px;
+}
+
+pre {
+  font-family:  monospace;
+	font-size: 12px;
+  border: 1px dashed gray;
+  width: 100%;
+  overflow: auto;
+  background-color: #E9E9E9;
+	padding-top: 10px;
+	padding-left: 10px;
+	padding-bottom: 10px;
+	padding-right: 10px;
+}
+
+
+.sourcecode {
+	font-family:  monospace;
+	font-size: 11px;
+	background-color: #E9E9E9;
+	padding-top: 20px;
+	padding-left: 20px;
+	padding-bottom: 20px;
+	color: #FF0000;
+}
+
+.console_command {
+	font-family:  monospace;
+	font-size: 11px;
+	color: green;
+  background-color: #E9E9E9;
+}
+
+a {
+	color:#4D87CE;
+	text-decoration:none;
+}
+
+a:hover {
+	color:#2a65ad;
+}
+
+/*
+** content styles
+*/
+
+#toc,
+.toc {
+	border: 1px solid #aaa;
+	background-color: #f9f9f9;
+	padding: 5px;
+	font-size: 95%;
+}
+
+#toc h2,
+.toc h2 {
+	display: inline;
+	border: none;
+	padding: 0;
+	font-size: 100%;
+	font-weight: bold;
+}
+
+#toc #toctitle,
+.toc #toctitle,
+#toc .toctitle,
+.toc .toctitle {
+	text-align: center;
+}
+
+#toc ul,
+.toc ul {
+	margin-left: 0;
+	padding-left: 0;
+	text-align: left;
+}
+#toc li,
+.toc li {
+	list-style-type: none;
+	list-style-image: none;
+}
+
+#toc ul ul,
+.toc ul ul {
+	margin: 0 0 0 2em;
+}
+
+#toc .toctoggle,
+.toc .toctoggle {
+	font-size: 94%;
+}
+
+.codecomment {
+	font-family:  monospace;
+	color: green;
+}
+
+div#SFLogo {
+  float: right;
+  padding-bottom: 10px;
+}
+
+div#sponsors {
+  float: right;
+  padding-bottom: 10px;
+}
+

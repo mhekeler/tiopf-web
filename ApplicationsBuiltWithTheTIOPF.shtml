@@ -1,0 +1,191 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>TechInsite - Applications build with the tiOPF</title>
+<!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>Applications build with the tiOPF</h1>
+<p> These are the major projects it has been used for that I know
+about. If you have used the framework, and would like your project
+added here, please <a href="/ContactingUs.shtml">contact us</a>.</p>
+<table border="0" width="600">
+  <tbody>
+    <tr>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0pt;"
+ width="163"><b>Application</b></td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0pt;"
+ width="211"><b>Author</b></td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0pt;"
+ width="242"><b>Description</b></td>
+    </tr>
+    <tr class="Normal">
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0px;">Clinical
+Patient Management System (CPMS)</td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0px;">Ian
+Krigsman
+      <p><i>ian at discoverysystems.com.au</i></p>
+      </td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0px;">Written
+for the Melbourne Sexual Health Centre to:<br>
+      <br>
+* record the attendance of clients<br>
+* manage their progress at each stage of their visit (waiting,
+triage/assessment, consultation)&nbsp;<br>
+* establish staff and clinic availability&nbsp;<br>
+* maintain a staff roster&nbsp;<br>
+* extrapolate attendance statistics to assess and improve the center's
+efficiency.<br>
+      <br>
+The system is written in Delphi 5 and uses tiOPF to access an Interbase
+(6.0) database. An early prototype using Paradox was migrated to the
+IBX layer with no changes to the business or front-end modules.</td>
+    </tr>
+    <tr class="Normal">
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0px;">PBPro
+-<br>
+pawnbroking terminal system</td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0px;"><i>ferrisoxide
+at iprimus.com.au</i></td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0px;">PBPro
+uses the TechInsite framework to manage pawn contracts and client
+details, using the IBX layer to persist business objects in a Firebird
+1.0 database.<br>
+      <br>
+The system is used at the point of contact with clients so has to be
+able to access all contract information quickly. Currently it's able to
+manage several thousand clients and related contracts on a moderately
+powerful box (Celeron 400) without excessively loading the CPU or
+memory.<br>
+      <br>
+PBPro is planned for release early Feburary 2003. The source code will
+be available on sourceforge.<br>
+      </td>
+    </tr>
+    <tr class="Normal">
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0px;">Kan!
+- Knowledge Management System Nationality: Norwegian Company:
+BedriftsPedagogisk Senter</td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0px;">Rune
+Rosenvinge
+      <p><i>rosenvin at online.no</i></p>
+      </td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0px;">Customerbase:
+30 companies Western Norway
+      <p>Application: Commercial application for knowledge
+management/Business Intelligence. </p>
+      <p>Duration: Approx 4 man years. Written in: Delphi 5
+Database(s): Oracle,SqlServer,Access </p>
+      <p>Typical DB size: 2GB Persistency: BDE,DOA,SDAC,ADO,ACCESS
+SDAC(SQLServer) and Access is selfwritten addons. </p>
+      </td>
+    </tr>
+    <tr class="Normal">
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0px;">Q-Bar
+2: Revolutionary EPoS system installed in many sites<br>
+around the world.</td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0px;">Andrew
+Denton<br>
+      <br>
+      <i>a_denton at blueyonder.co.uk </i> </td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0px;">Q-Bar
+2. This revolutionary EPoS system has been installed in many sites
+around the world. It primarily uses the IBX layer talking to a Firebird
+1<br>
+database but SQL Server versions are also in use in Portugal. The
+software is designed for use in busy nightclubs, bars and restaurants
+and provides comprehensive sales analysis either locally or over a wide
+area network. Using tiOPF has brought stability and ease of&nbsp;
+maintenance to what is a complex 600,000 line mission critical
+application. </td>
+    </tr>
+    <tr class="Normal">
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0px;">Victorian
+Department of Human Services (Australia)
+      <p>Integrated Reports and Information System (IRIS)</p>
+      </td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0px;">Ian
+Krigsman
+      <p><i>ian at discoverysystems.com.au</i></p>
+      </td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0px;">IRIS
+is a client management system installed in over 600 agencies around
+Victoria for the Department of Human Services. These range from single
+desktop systems to a network of 30+ users.&nbsp; The flexibility of
+dynamically loading the required tiOPF persistence layer enables the
+user to choose from either Firebird (Win and Linux), MS SQL Server or
+MS Access as their preferred database backend.&nbsp; XML, TAB and CSV
+persistence layers are also utilized to perform import/export functions.</td>
+    </tr>
+    <tr class="Normal">
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0pt;">Master
+Maths:<br>M2 Computer Based Training system</td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0pt;">Graeme
+Geldenhuys<br>
+      <br>
+      <i>graeme at mastermaths.co.za</i></td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0pt;">The
+M2 CBT system is a maths tutoring system for students. It also contains
+a franchise management side which handles schedules, reporting and
+basic accounting. The product is used in over 250 franchises and 200
+schools. The third major version of Master Maths' flagship product was
+rewritten from scratch to be a cross-platform product - switching to
+the Free Pascal Compiler in the process. tiOPF was chosen to handle the
+business objects and persistence side. To date, tiOPF was an excellent
+choice for handling our data persistence.</td>
+    </tr>
+    <tr class="Normal">
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0pt;">Master
+Maths:<br>M2 Worksheet Generator</td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0pt;">Graeme
+Geldenhuys<br>
+      <br>
+      <i>graeme at mastermaths.co.za</i></td>
+      <td
+ style="border-top-style: solid; border-top-width: 1px; border-bottom-style: solid; border-bottom-width: 0pt;">The
+M2 Worksheet Generator is a system that generates worksheets or exam papers based
+on a pool of questions in a Firebird database. Its target audience is in Master Maths 
+centres or public schools. The tutors can select pre-generated worksheets created 
+by Head Office, or can generate their own. Worksheets can be generated based on any 
+criteria selected in the treeview (language, grade, subject etc.). Worksheets can 
+be previewed and altered before saved in the database. A answers paper can also be 
+printed individually by the tutor to help with marking exams. This product was
+developed in Delphi 7 and Kylix 3 using tiOPF2. Only standard Delphi or Kylix components
+where used and one tiOPF GUI component (Splitter).
+<p>
+Screenshot 1:<br> <a href="/images/mastermaths/m2_wksgen_login.png" alt="The login screen">The login screen</a><br>
+Screenshot 2:<br> <a href="/images/mastermaths/m2_wksgen.png" alt="Generating a worksheet">Generating a worksheet</a>
+</td>
+    </tr>
+
+  </tbody>
+</table>
+<br>
+<!--#include virtual="/Shared/Footer.html"-->
+<br>
+</body>
+</html>

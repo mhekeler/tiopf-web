@@ -1,0 +1,205 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/1999/REC-html401-19991224/loose.dtd">
+<html>
+<head>
+<meta name="GENERATOR" content="PasDoc 0.10.0">
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
+<title>tiVisitor: Class TtiVisitor</title>
+<link rel="StyleSheet" type="text/css" href="pasdoc.css">
+</head>
+<body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#800080" alink="#FF0000">
+<a name="TtiVisitor"></a><h1 class="cio">Class TtiVisitor</h1>
+<table class="sections wide_list">
+<tr>
+<td><a class="section"  href="#@Description">Description</a></td><td><a class="section"  href="#@Hierarchy">Hierarchy</a></td><td>Fields</td><td><a class="section"  href="#@Methods">Methods</a></td><td><a class="section"  href="#@Properties">Properties</a></td></tr></table>
+<a name="@Description"></a><h2 class="unit">Unit</h2>
+<p class="unitlink">
+<a   href="tiVisitor.html">tiVisitor</a></p>
+<h2 class="declaration">Declaration</h2>
+<p class="declaration">
+<code>type TtiVisitor = class(TtiBaseObject)</code></p>
+<h2 class="description">Description</h2>
+<p>
+The class that does the visiting</p>
+<a name="@Hierarchy"></a><h2 class="hierarchy">Hierarchy</h2>
+<ul class="hierarchy"><li class="ancestor">TtiBaseObject</li>
+<li class="thisitem">TtiVisitor</li></ul><h2 class="overview">Overview</h2>
+<a name="@Methods"></a><h3 class="summary">Methods</h3>
+<table class="summary wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><code>function <b><a   href="tiVisitor.TtiVisitor.html#AcceptVisitor">AcceptVisitor</a></b>: boolean; overload; virtual;</code></td>
+</tr>
+<tr class="list2">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><code>function <b><a   href="tiVisitor.TtiVisitor.html#AcceptVisitor">AcceptVisitor</a></b>(const AVisited: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a>): boolean; overload; virtual;</code></td>
+</tr>
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><code>function <b><a   href="tiVisitor.TtiVisitor.html#VisitBranch">VisitBranch</a></b>(const ADerivedParent, AVisited: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a>): boolean; virtual;</code></td>
+</tr>
+<tr class="list2">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><code>function <b><a   href="tiVisitor.TtiVisitor.html#GetVisited">GetVisited</a></b>: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a>; virtual;</code></td>
+</tr>
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><code>procedure <b><a   href="tiVisitor.TtiVisitor.html#SetVisited">SetVisited</a></b>(const AValue: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a>);</code></td>
+</tr>
+<tr class="list2">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><code>procedure <b><a   href="tiVisitor.TtiVisitor.html#SetDepth">SetDepth</a></b>(const ADepth: TIterationDepth);</code></td>
+</tr>
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><code>constructor <b><a   href="tiVisitor.TtiVisitor.html#Create">Create</a></b>; virtual;</code></td>
+</tr>
+<tr class="list2">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><code>class function <b><a   href="tiVisitor.TtiVisitor.html#VisitorControllerClass">VisitorControllerClass</a></b>: TtiVisitorControllerClass; virtual;</code></td>
+</tr>
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><code>procedure <b><a   href="tiVisitor.TtiVisitor.html#Execute">Execute</a></b>(const AVisited: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a>); virtual;</code></td>
+</tr>
+</table>
+<a name="@Properties"></a><h3 class="summary">Properties</h3>
+<table class="summary wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><code>property <b><a   href="tiVisitor.TtiVisitor.html#Visited">Visited</a></b>: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a> read FVisited;</code></td>
+</tr>
+<tr class="list2">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><code>property <b><a   href="tiVisitor.TtiVisitor.html#ContinueVisiting">ContinueVisiting</a></b>: boolean read FContinueVisiting write FContinueVisiting;</code></td>
+</tr>
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><code>property <b><a   href="tiVisitor.TtiVisitor.html#Depth">Depth</a></b>: TIterationDepth read FDepth;</code></td>
+</tr>
+<tr class="list2">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><code>property <b><a   href="tiVisitor.TtiVisitor.html#IterationStyle">IterationStyle</a></b>: <a   href="tiVisitor.html#TtiIterationStyle">TtiIterationStyle</a> read FIterationStyle write FIterationStyle;</code></td>
+</tr>
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><code>property <b><a   href="tiVisitor.TtiVisitor.html#VisitedsOwner">VisitedsOwner</a></b>: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a> read FVisitedsOwner write FVisitedsOwner;</code></td>
+</tr>
+</table>
+<h2 class="description">Description</h2>
+<h3 class="detail">Methods</h3>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><a name="AcceptVisitor"></a><code>function <b>AcceptVisitor</b>: boolean; overload; virtual;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><a name="AcceptVisitor"></a><code>function <b>AcceptVisitor</b>(const AVisited: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a>): boolean; overload; virtual;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><a name="VisitBranch"></a><code>function <b>VisitBranch</b>(const ADerivedParent, AVisited: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a>): boolean; virtual;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><a name="GetVisited"></a><code>function <b>GetVisited</b>: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a>; virtual;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><a name="SetVisited"></a><code>procedure <b>SetVisited</b>(const AValue: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a>);</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><a name="SetDepth"></a><code>procedure <b>SetDepth</b>(const ADepth: TIterationDepth);</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><a name="Create"></a><code>constructor <b>Create</b>; virtual;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><a name="VisitorControllerClass"></a><code>class function <b>VisitorControllerClass</b>: TtiVisitorControllerClass; virtual;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><a name="Execute"></a><code>procedure <b>Execute</b>(const AVisited: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a>); virtual;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<h3 class="detail">Properties</h3>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><a name="Visited"></a><code>property <b>Visited</b>: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a> read FVisited;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><a name="ContinueVisiting"></a><code>property <b>ContinueVisiting</b>: boolean read FContinueVisiting write FContinueVisiting;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><a name="Depth"></a><code>property <b>Depth</b>: TIterationDepth read FDepth;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><a name="IterationStyle"></a><code>property <b>IterationStyle</b>: <a   href="tiVisitor.html#TtiIterationStyle">TtiIterationStyle</a> read FIterationStyle write FIterationStyle;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><a name="VisitedsOwner"></a><code>property <b>VisitedsOwner</b>: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a> read FVisitedsOwner write FVisitedsOwner;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<hr noshade size="1"><span class="appinfo"><em>Generated by <a  target="_parent" href="http://pasdoc.sourceforge.net/">PasDoc 0.10.0</a> on 2008-03-11 17:55:49</em>
+</span>
+</body></html>

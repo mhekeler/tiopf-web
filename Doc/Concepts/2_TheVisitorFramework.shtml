@@ -1,0 +1,902 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>tiOPF Documentation - The Visitor pattern and the tiOPF</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+
+<h1>2. The Visitor Pattern and the tiOPF</h1> 
+
+<h1>The aims of this chapter</h1>
+<p>The aim of this chapter is to introduce the Visitor Pattern as one of the 
+core concepts of the TechInsite Object Persistence Framework (tiOPF). We will 
+take a detailed look at the problem we are aiming to solve, then investigate 
+some alternative solutions for it before introducing the Visitor. As we are 
+developing our Visitor framework, we will come across another problem that 
+will need our attention: How do we iterate over a collection of objects in a 
+generic way? This will be studied too.
+</p>
+<p>So, the aim of this chapter is to come up with a generic way of performing 
+a family of related tasks on some of the elements in a list. The task we 
+perform may be different depending on the internal state of each element. We 
+may not perform any tasks at all, or we may perform multiple tasks on multiple 
+list elements.</p>
+
+<h2>Prerequisites</h2>
+<p>The reader should have a good understanding of Object Pascal and be clear 
+on the concepts of object oriented programming with Object Pascal. The previous 
+Chapter "Chapter #1 What is an OPF?" will help understand some of 
+the concepts of an object persistence framework.</p>
+
+<h2>The business problem we will work with as an example</h2>
+<p>As an example, we will construct an address book application that enables 
+us to store peoples' names and contact details. With the increase in the 
+number of different ways we can contact a person, our application must be 
+flexible enough to cater for new address types without the need for any 
+re-engineering. (I have memories of having to add a Phone_Mobile column to an 
+application, only to complete that batch of work to be asked to add an EMail 
+column.). We need to allow for two types of addresses: regular addresses like 
+home, work or postal and e-addresses like phone, fax, mobile, EMail, Web.</p>
+<p>Our presentation layer has to have an Explorer / Outlook look and feel and 
+we need to make extensive use of Microsoft's TreeView and ListView 
+common controls. The application must perform well and must not have the look 
+and feel of a conventional, form based client / server app.</p>
+<p>The main form of our application is shown below.</p>
+<p> 
+  <img width="437" height="265" alt="Form 01" src="2_TheVisitorFramework_Images/2_TheVisitorFramework_Form01.jpg"> </p>
+<p>A right mouse click on the tree will let you add or delete a person or 
+company. A right click on either of the list views will open a modal dialog 
+and let you edit, insert or delete an address or e-address.</p>
+<p>The data will be stored in a variety of formats, and we will look at how 
+to do this with the help of the Adaptor Pattern as described in Chapter 7.</p>
+
+<h2>Setting up the demo</h2>
+<p>We will start work with a simple collection of objects as an example. We 
+will create a list of people, the people will have two properties: Name and 
+EMailAdrs. To start off, the people will be added to the list in the 
+list's onstructor (then we will progressively read them from a text 
+file, then Interbase/Firebird database). This is an over simplified example, but it is 
+sufficient to use when discussing the problems that the Visitor pattern solve.</p>
+<p>Create a new application, and add two classes in the main form's 
+interface section: TPeople, which descends from the TObjectList and TPerson 
+which descends from TObject. The interface section will look like this:</p>
+
+<pre>
+TPersonList = class(TObjectList)
+public
+ constructor Create;
+end;
+ 
+TPerson = class(TObject)
+private
+  FEMailAdrs: string;
+  FName: string;
+public
+  property   Name: string read FName write FName;
+  property   EMailAdrs: string read FEMailAdrs write FEMailAdrs;
+end;
+</pre>
+
+<p>In the constructor of the list, we will create three instances of TPerson 
+like this:</p>
+
+<pre>
+constructor TPersonList.Create;
+var
+ lData: TPerson;
+begin
+  inherited;
+  lData := TPerson.Create;
+  lData.Name      := 'Malcolm Groves';
+  lData.EMailAdrs := 'malcolm@dontspamme.com';  // (ADUG Vice President)
+  Add(lData);
+  
+  lData := TPerson.Create;
+  lData.Name      := 'Don MacRae';  // (ADUG President)
+  lData.EMailAdrs := 'don@dontspamme.com';
+  Add(lData);
+ 
+  lData := TPerson.Create;
+  lData.Name      := 'Peter Hinrichsen';  // (Yours truly)
+  lData.EMailAdrs := 'peter_hinrichsen@dontspamme.com';
+  Add(lData);
+ end;
+</pre>
+
+<p>To start off, we are going to iterate over the list and perform two operations 
+on each list element. The operations will be similar, but not the same. In this 
+dumb, over simplified example we will call ShowMessage( ) on each TPerson's 
+Name and EMailAdrs properties. To start this off, add two buttons to the 
+application's main form: One to show each person's name, the 
+other to show each person's EMailAdrs. The form will look like this:</p>
+<p> <img width="210" height="105" alt="Form 02" src="2_TheVisitorFramework_Images/2_TheVisitorFramework_Form02.gif"> </p>
+
+<h2>Step #1. Hard code the iteration</h2>
+
+<p>To show each person's name, add the following code in the first buttons 
+OnClick event.
+</p>
+<pre>
+procedure TFormMain.btnShowNamesClick(Sender: TObject);
+var
+  i: integer;
+begin
+  for i := 0 to FPersonList.Count - 1 do
+    ShowMessage(TPerson(FPersonList.Items[i]).Name);
+end;
+</pre>
+<p>and to show each persons Email address, add the following code to the 
+second button's OnClick event.</p>
+<pre>
+procedure TFormMain.btnShowEMailsClick(Sender: TObject);
+var
+  i: integer;
+begin
+  for i := 0 to FPersonList.Count - 1 do
+    ShowMessage(TPerson(FPersonList.Items[i]).EMailAdrs);
+end;
+</pre>
+<p>(I did say it was over simplified. We will be writing data out to a text 
+file, and saving it to a database soon.)</p>
+<p>Now, there are several things I don't like about this code:</p>
+<ul>
+  <li>We have two routines that do pretty much the same thing. The only 
+difference is the property we are hitting in ShowMessage()</li>
+  <li>Iterating over a list becomes very tedious when you have to write this 
+code in hundreds of places in your application.</li>
+  <li>Having to type cast each element of the list as a TPerson is error prone. 
+What if a TAnimal found its way into the list? There is no mechanism to stop 
+this happening, and no mechanism to protect us from errors if it does.</li>
+</ul>
+<p>Next, we shall look at ways of improving this code by abstracting away the 
+iteration logic into a parent class.</p>
+
+<h2>Step #2. Abstracting the iteration logic</h2>
+
+<p>We want to abstract the iteration logic into a parent class. The iteration 
+logic is simple and looks like this:</p>
+<pre>
+for i := 0 to Flist.Count - 1 do
+  // Do something here...
+</pre>
+<p>Sounds like we are building an instance of the Iterator Pattern. The GoF tells
+us about two kinds of Iterators: External Iterators and internal Iterators. The 
+external Iterator was shown to us at last year's BorCon in Malcolm Groves 
+(famous) presentation on writing solid code. We will use an internal Iterator 
+here because it makes it easier to iterate over the nodes of a tree, which is 
+what we will be ultimately wanting to do. We will be adding a method called 
+Iterate to our collection class. This method will be passed a procedural type 
+parameter that defines a task to be performed on each node of the collection. 
+We will call this procedural type TDoSomethingToAPerson.</p>
+<p>To do this, we firstly extend the interface of the demonstration with a 
+forward declaration of TPerson (because TDoSomethingToAPerson references 
+TPerson, and TPerson references TDoSomethingToAPerson). Next, create a 
+procedure type called TDoSomethingToAPerson, which takes a single parameter 
+of type TPerson. Procedural types allow you to treat procedures and functions 
+as values that can be assigned to variables or passed to other procedures and 
+functions. This way we can define a procedure to call ShowMessage(Person.Name), 
+and one to call ShowMessage(Person.EMailAdrs), then pass these procedures 
+to the generic iteration routine. We add the method 
+DoSomething(pMethod: TDoSomethingToAPerson) to our list of TPersonList. The 
+finished interface section will look like this:</p>
+<pre>
+TPerson = class;  // Forward declaration of TPerson,
+                  // required by TDoSomethingToAPerson
+TDoSomethingToAPerson = procedure(const pData: TPerson) of object;
+
+TPersonList = class(TObjectList)
+public
+  constructor Create;
+  procedure   DoSomething(pMethod: TDoSomethingToAPerson);
+end;
+</pre>
+<p>The implementation of DoSomething() will look like this:</p>
+<pre>
+procedure TPersonList.DoSomething(pMethod: TShowMethod);
+var
+  i: integer;
+begin
+  for i := 0 to Count - 1 do
+    pMethod(TPerson(Items[i]));
+end;
+</pre>
+<p>Now, to perform an operation on each element in the list, we must do two 
+things. Firstly define a method of type TDoSomethingToAPerson, and secondly 
+call DoSomething(), passing a pointer to our TDoSomethingToAPerson as a 
+parameter. The code to do this is shown below:</p>
+<pre>
+// Somewhere in the application, we must define this method
+procedure TFormMain.DoShowName(const pData: TPerson);
+begin
+  ShowMessage(pData.Name);
+end;
+ 
+// Then in the form, we implement the call like this
+procedure TFormMain.btnMethodPointerShowNameClick(Sender: TObject);
+begin
+  FPersonList.DoSomething(DoShowName);
+end;
+</pre>
+<p>This is progress. We have introduced three layers of abstraction. The 
+generic iteration logic is contained in the list class. The business logic 
+(implemented as ShowMessage) is contained in another part of the application, 
+and the GUI has a single line call to kick off a process.</p>
+<p>It is easy to imagine how we could replace the call to ShowMessage with a 
+call to a TQuery instance that runs some SQL to save the data contained in the 
+TPerson. The call to a TQuery might look like this:</p>
+<pre>
+procedure TFormMain.SavePerson(const pData: TPerson);
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.SQL.Text := 'insert into people values (:Name, :EMailAdrs)';
+    lQuery.ParamByName('Name').AsString       := pData.Name;
+    lQuery.ParamByName('EMailAdrs').AsString  := pData.EMailAdrs;
+    lQuery.Datababase := gAppDatabase;
+    lQuery.ExecSQL;
+  finally
+    lQuery.Free;
+  end;
+end;
+</pre>
+<p>This introduces the problem of maintaining state. We have connected the 
+TQuery up to an application wide database called gAppDatabase. Where is this 
+going to be maintained? Also, we will very quickly get tired of creating the 
+TQuery, setting up the parameters, executing the query, then remembering to 
+call free. This block of code would be better wrapped up an a class which 
+inherits from an abstract that takes care of creating and freeing the TQuery, 
+and other chores like wiring it up to a TDatabase.</p>
+
+<h2>Step #3. Instead of passing a method pointer, we will pass an object</h2>
+
+<p>Passing an object to our generic iterate method solves the problem of 
+maintaining state. We will call the object we pass a Visitor, and create an 
+abstract Visitor class called TPersonVisitor with a single method Execute. 
+The interface of our abstract visitor looks like this:</p>
+<pre>
+TPersonVisitor = class(TObject)
+public
+  procedure Execute(pPerson: TPerson); virtual; abstract;
+end;
+</pre>
+<p>Next, we will add a method called Iterate to the TPersonList class. The 
+interface of TPersonList now looks like this:</p>
+<pre>
+TPersonList = class(TObjectList)
+public
+  procedure Iterate(pVisitor: TPersonVisitor);
+end;
+</pre>
+<p>The implementation of TPersonList.Iterate looks like this:</p>
+<pre>
+procedure TPersonList.Iterate(pVisitor: TPersonVisitor);
+var
+  i: integer;
+begin
+  for i := 0 to Count - 1 do
+    pVisitor.Execute(TPerson(Items[i]));
+end;
+</pre>
+<p>The Iterate method of TPersonList is passed a concrete instance of 
+TPersonVisitor. For each TPerson in the list, the execute method of the 
+TPersonVisitor is called with the TPerson as a parameter.</p>
+<p>We create concrete instances of TPersonVisitor called TShowNameVisitor 
+and TShowEMailAdrsVistor that implement the specific behavior we require. This 
+is shown below for TShowNameVisitor:</p>
+<pre>
+// Interface section
+TShowNameVisitor = class(TPersonVisitor)
+public
+  procedure Execute(pPerson: TPerson); override;
+end;
+</pre>
+<pre>
+// Implementation section
+procedure TFormMain.btnVisitorNameClick(Sender: TObject);
+var
+  lVis: TPersonVisitor;
+begin
+  lVis := TShowNameVisitor.Create;
+  try
+    FPersonList.Iterate(lVis);
+  finally
+    lVis.Free;
+  end;
+end;
+</pre>
+<p>From this we can see that while we have solved one problem, we have created 
+another. The iteration logic is abstracted away to the list class. We are 
+using an object to define the special behavior which will allow us to maintain 
+some state information, but we have blown the number of lines of code to 
+implement this behavior from one as in:</p>
+<pre>
+procedure TFormMain.btnMethodPointerShowNameClick(Sender: TObject);
+begin
+  FPersonList.DoSomething(DoShowName);
+end;</pre>
+<p>to the nine lines in the preceding block of code. What we need now is a 
+visitor manager to take care of the construction and destruction of our visitor 
+classes. We will potentially have several per operation so the visitor manager 
+will handle named lists of visitors and call each visitor in the list in turn 
+against the elements in the list. This will become essential as we move 
+towards using the Visitor to persist data to a relational database because a 
+simple save may require three different SQL statements: CREATE, UPDATE and 
+DELETE.</p>
+
+<h2>Step #4. Abstract the Visitor logic</h2>
+
+<p>Before we go any further, we must abstract the Visitor functionality away 
+from the business objects so we never have to touch it again. We will do this 
+in three stages. We will create abstract TVisitor and TVisited classes, then 
+we will create an abstract business object, and business object list that will 
+descend from TVisited. We will then re-factor our TPerson and TPersonList classes 
+to descend from the newly created abstract classes.</p>
+<p>The class diagram of what we are aiming to build looks like this:</p>
+<p> <img width="313" height="375" alt="UML Visitors" src="2_TheVisitorFramework_Images/2_TheVisitorFramework_UMLVisitors.gif"> </p>
+<p>The TVisitor has two methods, AcceptVisitor() and Execute(). Both taking 
+a single parameter of type TVisited. The TVisited has a single method called 
+Iterate() which takes a single parameter of type TVisitor. TVisited.Iterate() 
+calls the Execute method on the Visitor that is passed as a parameter against 
+itself, and if it contains other objects, against each one of those too. The 
+function TVisitor.AcceptVisitor is necessary because we are building a generic 
+framework. It will be possible to pass a visitor that is designed for 
+handling TPeople a concrete instance of, say a TDog and we must have a 
+mechanism for preventing this from causing an access violation. The TVisited 
+descends from TPersistent because down the track, we will be implementing 
+some functionality that requires RTTI. The interfaces of TVisitor and
+ TVisited are shown below:</p>
+<pre>
+TVisitor = class(TObject)
+protected
+  function AcceptVisitor(pVisited : TVisited): boolean; virtual; abstract;
+public
+  procedure Execute(pVisited: TVisited); virtual; abstract;
+end; // Both AcceptVisitor and Execute must be implemented in the concreate</pre>
+<pre>
+TVisited = class(TPersistent)
+public
+  procedure Iterate(pVisitor: TVisitor); virtual;
+end;</pre>
+<p>Both TVisitor.AcceptVisitor and TVisitor.Execute must be implemented in 
+the concrete class. The implementation of TVisited.Iterate, which contains a 
+call to TVisitor.Execute, is shown below:</p>
+<pre>
+procedure TVisited.Iterate(pVisitor: TVisitor);
+begin
+  pVisitor.Execute(self);
+end;</pre>
+<h2>Step #5. Create an abstract business object, and abstract list object</h2>
+<p>We require two more abstract classes in our framework: An abstract business 
+object, and a list container for the abstract business object. We shall call 
+these TtiObject and TtiObjectList and the interface of these classes is 
+shown below:</p>
+<pre>
+TtiObject = class(TVisited)
+public
+  constructor Create; virtual;
+end;</pre>
+<p>We will be adding significantly to TtiObject when we look in more detail 
+at the business object framework, but for the time being, we just add a 
+virtual constructor so we can uniformly override the constructor in 
+descendent classes.</p>
+<p>We want our list class, TtiObjectList to descend from TVisited so the 
+generic visitor behavior can be implemented (actually, we want it to descend 
+from TtiObject for reasons we will discuss later). Ideally, we would use 
+interfaces to give our list class the iteration behavior, but much of this 
+code base predates the popularity of interfaces, and I have not faced up to 
+the task of re-factoring to take advantage the benefits they can offer.</p>
+<p>To create a list class which descends from TVisited and TtiObject, we 
+shall use object containment. The interface of TtiObjectList is shown below 
+and the implementation is pretty much what you would expect.</p>
+<pre>
+TtiObjectList = class(TtiObject)
+private
+  FList: TObjectList;
+  function    GetList: TList;
+public
+  constructor Create; override;
+  destructor  Destroy; override;
+  property    List: TList read GetList;
+  procedure   Iterate( pVisitor: TVisitor); override;
+  procedure   Add(pData: TObject);
+end ;</pre>
+<p>The most important method in this class is the overridden procedure 
+Iterate. In the abstract class TVisitor, iterate is implemented as the one 
+line call pVisitor.Execute(self). In the TtiObjectList it is implemented 
+like this:</p>
+<pre>
+procedure TtiObjectList.Iterate(pVisitor: TVisitor);
+var
+  i : integer ;
+begin
+  inherited Iterate(pVisitor);
+  for i := 0 to FList.Count - 1 do
+    (FList.Items[i] as TVisited).Iterate(pVisitor);
+end;</pre>
+<p>This is an important core concept. We now have two abstract business 
+objects TtiObject and TtiObjectList. Both have an Iterate method that is 
+passed an instance of a TVisitor as a parameter. In each case, the 
+TVisitor's Execute method is called with self as a parameter. This 
+call is made via inherited at the top of the hierarchy. For the TtiObjectList 
+class, each object in the owned list also has its Iterate method called with 
+the visitor being passed as the parameter. This ensures that all objects in 
+the hierarchy are touched by the Visitor.</p>
+<h2>Step #6. Create a Visitor manager</h2>
+<p>Now, back to the original problem we created for our selves in step #3. 
+We don't want to be spending all our time creating and destroying 
+visitors. The solution is in the Visitor Manager.</p>
+<p>The Visitor Manager performs two main tasks: It maintains a list of 
+registered visitors (visitors are registered in the implementation section 
+of the unit where they are declared.); and calls a group of visitors that 
+are registered with a given command name against the data object it is passed.</p>
+<p>To implement the Visitor manager, we will define three more classes: The 
+TVisClassRef, TVisMapping and the TtiVisitorManager.</p>
+<p>The TVisClassRef is a class reference type that will hold an instance 
+TVisitor's class. I find the help text description of class references 
+a little confusing. The best way to understand them is with an example. Lets 
+say we have our abstract Visitor class TVisitor, and a Visitor class reference 
+type TVisClassRef. We also have a concrete Visitor called TSaveVisitor. The 
+TVisClassRef type is declared like this:</p>
+<pre>TVisClassRef = class of TVisitor ;</pre>
+<p>This lets us write code like this:</p>
+<pre>
+procedure ExecuteVisitor(const pData: TVisited; const pVisClass: TVisClassRef);
+var
+  lVisitor: TVisitor;
+begin
+  lVisitor := pVisClass.Create;
+  try
+    pData.Iterate(lVisitor);
+  finally
+    lVisitor.Free;
+  end;
+end;</pre>
+<p>We pass two parameters to this procedure; pData which is an instance of 
+TVisited (like our TPeople), a TVisClassRef, which could be TShowNameVisitor 
+or TShowEMailAdrsVisitor. This procedure takes care of the tedious business 
+of creating the visitor, calling iterate, then freeing the visitor when done.</p>
+<p>The second class we create for our visitor manager is called TVisMapping. 
+It is a simple data structure to hold two pieces of information: a 
+TVisClassRef and a string called Command. The interface of TVisMapping is 
+shown below:</p>
+<pre>
+TVisMapping = class(TObject)
+private
+  FCommand: string;
+  FVisitorClass: TVisClassRef;
+public
+  property VisitorClass: TVisClassRef read FVisitorClass write FVisitorClass;
+  property Command: string read FCommand write FCommand;
+end;</pre>
+<p>The final class we create is the TtiVisitorManager. When we register a 
+Visitor with the Visitor Manager, an instance of TVisMapping is created and 
+added to the list inside the TtiVisitorManager. The command and VisitorClass 
+properties are set which allows us to execute a group of visitors identified 
+by a string. The interface of the TtiVisitorManager is shown below:</p>
+<pre>
+TtiVisitorManager = class(TObject)
+private
+  FList: TObjectList;
+public
+  constructor Create;
+  destructor  Destroy; override;
+  procedure   RegisterVisitor(const pCommand: string; pVisitorClass: TVisClassRef);
+  procedure   Execute(const pCommand: string; pData: TVisited);
+end;</pre>
+<p>The key methods here are RegisterVisitor and Execute. RegisterVisitor is 
+called in the implementation section of the unit where the Visitor is defined 
+and is typically called like this:</p>
+<pre>
+initialization
+   gTIOPFManager.VisitorManager.RegisterVisitor('show', TShowNameVisitor);
+   gTIOPFManager.VisitorManager.RegisterVisitor('show', TShowEMailAdrsVisitor);</pre>
+<p>The implementation of RegisterVisitor is shown below (this code is much 
+the same as the code found in a Delphi implementation of the Factory Pattern)</p>
+<pre>
+procedure TtiVisitorManager.RegisterVisitor(const pCommand: string; 
+    const pVisitorClass: TVisClassRef);
+var
+  lData: TVisMapping;
+begin
+  lData := TVisMapping.Create;
+  lData.Command := pCommand;
+  lData.VisitorClass := pVisitorClass;
+  FList.Add(lData);
+end;</pre>
+<p>The other important method in the TtiVisitorManager is Execute. Execute 
+takes two parameters, the command name which identifies the family of 
+visitors to be executed, and the data object which is at the top of the 
+tree to be iterated over. The implementation of Execute is shown below:</p>
+<pre>
+procedure TtiVisitorManager.Execute(const pCommand: string; 
+    const pData: TVisited);
+var
+  i: integer;
+  lVisitor: TVisitor;
+begin
+  for i := 0 to FList.Count - 1 do
+    if SameText(pCommand, TVisMapping(FList.Items[i]).Command) then
+    begin
+      lVisitor := TVisMapping(FList.Items[i]).VisitorClass.Create;
+      try
+        pData.Iterate(lVisitor);
+      finally
+        lVisitor.Free;
+      end;
+    end;
+end;</pre>
+<p>To execute both the ShowName and ShowEMailAdrs visitors (the ones we 
+registered above), one after the other we would make the following call to 
+the Visitor manager.</p>
+<pre>gTIOPFManager.VisitorManager.Execute('show', FPeople);</pre>
+<p>Next, we will create some persistent Visitors that will let us make calls 
+like</p>
+<pre>
+// To read from a text file
+gTIOPFManager.VisitorManager.Execute('read', FPeople);
+// To save to a text file
+gTIOPFManager.VisitorManager.Execute('save', FPeople);</pre>
+<p>but first we will use the tiListView and tiPerAwareControls to create a 
+GUI to use while editing the list of TPeople.</p>
+<h2>Step #7. Re-factor the BOM to descend from our abstract BO and BO list</h2>
+<p>We shall start be re-factoring our business objects TPeople and TPerson to 
+descend from the abstract classes TtiObjectList and TtiObject. This means that
+ our iteration logic will be wrapped up in the parent class, never to be 
+touched again. It also makes it possible to use the business objects with the 
+visitor manager.</p>
+<p>The new interface of the TPeople looks like this:</p>
+<pre>TPeople = class(TtiObjectList);</pre>
+<p>In fact, there is no code to implement in the class TPeople. In theory, 
+we could do without the concrete class TPeople and store our TPerson objects 
+in an instance of TtiObjectList. We go to the trouble of creating the concrete 
+class TPeople however because we use the line result := Visited is TPeople 
+in the AcceptVisitor method. We need to know the concrete class of the 
+collection so we can decide if we want to process it with a visitor.</p>
+<p>The TPerson class now descends from TtiObject. We must also moved the 
+persistent properties in the TPerson class from public to published. This 
+allows us to use RTTI to present the data with the TPersistent aware 
+controls, and to use the mapping framework we shall look at later to reduce 
+the amount of code we must write to save the objects to a database. 
+The interface of TPerson now looks like this:</p>
+<pre>
+TPerson = class(TtiObject)
+private
+  FEMailAdrs: string;
+  FName: string;
+published
+  property   Name: string read FName write FName;
+  property   EMailAdrs: string read FEMailAdrs write FEMailAdrs;
+end;</pre>
+<h2>Step #8. Create a GUI</h2>
+<p>Download and install the TechInsite persistence framework code from 
+http://www.tiopf.com.au/releases/latest/ and following the instructions 
+at www.tiopf.com/doc/installing to install the TPersistent 
+aware controls into your component pallet. When you have finished, your 
+component pallet should look like this:</p>
+<p> <img width="576" height="77" alt="tiOPF Component Pallette" src="2_TheVisitorFramework_Images/2_TheVisitorFramework_tiOFPComponentPallet.jpg"> </p>
+<p>Drop a TtiListView on the application's main form then in the 
+form's constructor create an instance of TPeople and store it to 
+a variable FPeople. Assign the data property of the TtiListView like this:</p>
+<pre>
+procedure TFormMain_VisitorManager.FormCreate(Sender: TObject);
+begin
+  FPeople := TPeople.Create;
+  LV.Data := FPeople.List;
+end;</pre>
+<p>Select the TtiListView and in the object inspector change its name to
+ LV. Set the VisibleButtons property to [tiLVBtnVisNew ,tiLVBtnVisEdit, 
+tiLVBtnVisDelete] then go to the Events tab of the Object Inspector where 
+we will implement the OnEdit, OnInsert and OnDelete methods.</p>
+<p>Run the application and you should have a form that looks like this:</p>
+<p><img width="366" height="207" alt="Form 03" src="2_TheVisitorFramework_Images/2_TheVisitorFramework_Form03.gif"> </p>
+<p>(The TtiListView will automatically detect a TList of TPersistent 
+descendants and display the published properties as columns in the list)</p>
+<p>The three small buttons on the TtiListView fire events called OnEdit, 
+OnInsert and OnDelete when clicked. An edit dialog will be implemented under 
+the OnEdit and OnInsert events so we can play around with the data. The 
+code in the OnEdit event would typically look like this:</p>
+<pre>
+procedure TFormMain_VisitorManager.LVItemEdit(pLV: TtiCustomListView;
+   pData: TPersistent; pItem: TListItem);
+begin
+  TFormEditPerson.Execute( pData ) ;
+end ;</pre>
+<p>The things to notice are that the OnEdit event on the TtiListView passes 
+some useful values as parameters including the data object under the 
+TListView, as well as the usual sender and TListItem properties. The edit 
+dialog implements a class procedure called Execute that takes the data object 
+to be edited as a parameter. The dialog we shall build uses the TechInsite 
+TPersistent aware controls, and looks like this:</p>
+<p><img width="294" height="141" alt="Form 03" src="2_TheVisitorFramework_Images/2_TheVisitorFramework_Form04.gif"> </p>
+<p>No rocket science here except that a one liner as calls the dialog 
+described above. The implementation of the class method Execute( ) looks 
+like this:</p>
+<pre>
+class procedure TFormEditPerson.Execute(pData: TPersistent);
+var
+  lForm : TFormEditPerson ;
+begin
+  lForm := TFormEditPerson.Create( nil ) ;
+  try
+    lForm.Data := pData ;
+    lForm.ShowModal ;
+  finally
+    lForm.Free ;
+  end ;
+end;</pre>
+<p>This code can be implement in an abstract form, so we only have to 
+write it once. The only code we do have to write for a dialog is contained 
+in the SetData( ) method and looks like this:</p>
+<pre>
+procedure TFormEditPerson.SetData(const Value: TPersistent);
+begin
+  FData := Value;
+  paeName.LinkToData( FData, 'Name' ) ;
+  paeEMailAdrs.LinkToData( FData, 'EMailAdrs' ) ;
+end;</pre>
+<p>Now that we have a basic form to browse a list of objects and to edit 
+the objects, we can take a look at how to save the data to a text file.</p>
+<h2>Step #9 Create an abstract text file visitor</h2>
+<p>We shall create an abstract text file visitor, that knows how to read 
+and write to a file. There are three ways we could do this: Using 
+Delphi's file management routines (like AssignFile() and ReadLn()); 
+using a TStringStream or TFileStream, or using a TStringList.</p>
+<p>The file management routines are good, but have been around since the 
+early days of Pascal and are a little dated (IMHO). The Stream approach is 
+better because it is very object oriented and makes it easy to move data 
+from one stream to another. Compression and encryption are also made a 
+piece of cake, however reading from a TFileStream or TStringStream line 
+by line is a chore. The TStringList gives us the LoadFromFile() and 
+SaveToFile() methods which are easy to use, but rather slow on large files. 
+We shall use the TStringList as the interface to a text file here because 
+it is easy to use. I suggest looking at developing a TStream based solution 
+for use in real life though.</p>
+<p>The interface of our abstract file visitor looks like this:</p>
+<pre>
+TVisFile = class( TVisitor )
+protected
+  FList : TStringList ;
+  FFileName : TFileName ;
+public
+  constructor Create ; override ;
+  destructor Destroy ; override ;
+end ;</pre>
+<p>and the implementation looks like this:</p>
+<pre>constructor TVisFile.Create;
+begin
+  inherited;
+  FList := TStringList.Create ;
+  if FileExists( FFileName ) then
+    FList.LoadFromFile( FFileName ) ;
+end;</pre>
+<pre>
+destructor TVisFile.Destroy;
+begin
+  FList.SaveToFile( FFileName ) ;
+  FList.Free ;
+  inherited;
+end;</pre>
+<p>The value of FFileName is set in the constructor of the concrete class, 
+which is hardly a good long term solution but it is sufficient to get us 
+working here. The class diagram of the hierarchy we are building is shown 
+below.</p>
+<p> <img width="576" height="354" alt="UML File Visitors" src="2_TheVisitorFramework_Images/2_TheVisitorFramework_UMLFileVisitors.gif"> </p>
+<p>The next step is to create two descendants of TVisFile: one for managing 
+fixed length text files (TXT) and the other for managing comma separated 
+value (CSV) files. The implementation of these is shown below:</p>
+<pre>
+constructor TVisCSVFile.Create;
+begin
+  FFileName := 'Names.CSV' ;
+  inherited;
+end;</pre>
+<pre>
+constructor TVisTXTFile.Create;
+begin
+  FFileName := 'Names.TXT' ;
+  inherited;
+end;</pre>
+<p>As you can see, the only implementation change is to set the value of 
+FFileName in the constructor.</p>
+<h2>Step #10. Create the text file read and save Visitors</h2>
+<p>We implement two concrete visitors: one to read TXT files and one to 
+save to TXT files. The TXT read visitor has the AcceptVisitor and Execute 
+methods overridden. AcceptVisitor checks the object being visited is an 
+instance of TPeople with the one line call result := pVisited is TPeople. The 
+implementation of TVisTXTRead.Execute is shown below:</p>
+<pre>
+procedure TVisTXTRead.Execute(pVisited: TVisited);
+var
+  i : integer ;
+  lData : TPerson ;
+begin
+  if not AcceptVisitor( pVisited ) then
+    Exit ; //==&gt;
+  TPeople( pVisited ).List.Clear ;
+  for i := 0 to FList.Count - 1 do
+  begin
+    lData := TPerson.Create ;
+    lData.Name := Trim( Copy( FList.Strings[i], 1, 20 )) ;
+    lData.EMailAdrs := Trim( Copy( FList.Strings[i], 21, 80 )) ;
+    TPeople( pVisited ).Add( lData ) ;
+  end ;
+end;</pre>
+<p>This visitor clears the internal list in the TPeople class that was 
+passed to the execute method, then scans the internal TStringList and creates 
+an instance of TPerson for each line it finds. The Name and EmailAdrs 
+properties are extracted from the space padded lines in the TStringList.</p>
+<p>The TXT file save visitor performs the reverse of this operation. In the 
+constructor the internal TStringList is emptied of data, then AcceptVisitor 
+checkes if the object being visited is an instance of TPerson. This is an 
+important difference between the read visitor and the save visitor. The read 
+visitor works on an instance of TPeople and the save visitor works on an 
+instance of TPerson. Strange and confusing? Yes, on the surface it looks 
+like it would be easier to read to and save from a TPeople, scanning the 
+TStringList and writing to the TPeople for a read and scanning the TPeople 
+and writing to the TStringList for a Save. This would defenitely be easier 
+when persisting to a text file, however when saving to a relational database, 
+we only want to execute SQL for objects that have changed (newly created, 
+delted or edited) so we want to have the flexiability to test an 
+object's internal state in the AcceptVisitor method before calling 
+Execute. So, TVisTXTSave.AcceptVisitor( ) has the one line call 
+result := pVisited is TPerson.</p>
+<p>TVisTXTSave.Execute simply writes the Name and EMailAdrs properties to 
+the TStringList after padding them with spaces. The implementation of 
+Execute is shown below:</p>
+<pre>
+procedure TVisTXTSave.Execute(pVisited: TVisited);
+begin
+  if not AcceptVisitor( pVisited ) then
+    Exit ; //==&gt;
+  FList.Add( tiPadR( TPerson( pVisited ).Name, 20 ) +
+    tiPadR( TPerson( pVisited ).EMailAdrs, 60 )) ;
+end;</pre>
+<p>The tiPadR( ) function will pad a string with spaces.</p>
+<h2>Step #11. Create the CSV file read and save Visitor</h2>
+<p>The CSV file read and save visitors are similar to the TXT file versions, 
+except that instead of using Copy() and tiPadR() to extract and write the 
+object's properties, we use tiToken( ) which is a function that can 
+break a delimited string up into it's individual pieces. (tiToken( ) 
+was cloned from a Clipper function of the same name when I moved to Delphi 1 
+in the early days of Delphi). The implementation of TVisCSVRead.Execute and 
+TVisCSVSave.Execute are shown below:</p>
+<pre>
+procedure TVisCSVSave.Execute(pVisited: TVisited);
+begin
+  if not AcceptVisitor( pVisited ) then
+    Exit ; //==&gt;
+  // Build up a string comprising the Name and EmailAdrs separated by a comma
+  FList.Add( TPerson( pVisited ).Name + ',' +
+  TPerson( pVisited ).EMailAdrs ) ;
+end;
+   
+procedure TVisCSVRead.Execute(pVisited: TVisited);
+var
+  i : integer ;
+  lData : TPerson ;
+begin
+  if not AcceptVisitor( pVisited ) then
+    Exit ; //==&gt;
+  TPeople( pVisited ).List.Clear ;
+  for i := 0 to FList.Count - 1 do
+  begin
+    lData := TPerson.Create ;
+    // Parse a string of the form "Name,EmailAdrs"
+    lData.Name := tiToken( FList.Strings[i], ',', 1 ) ;
+    lData.EMailAdrs := tiToken( FList.Strings[i], ',', 2 ) ;
+    TPeople( pVisited ).Add( lData ) ;
+  end ;
+end;</pre>
+<p>All that remains to be done now is to register the four visitors with the 
+visitor manager, and test the application's ability to read from one 
+file format and to save to another. We register the Visitors in the 
+unit's initialization section like this:</p>
+<pre>
+initialization
+  gTIOPFManager.VisitorManager.RegisterVisitor( 'CSVRead', TVisCSVRead ) ;
+  gTIOPFManager.VisitorManager.RegisterVisitor( 'CSVSave', TVisCSVSave ) ;
+  gTIOPFManager.VisitorManager.RegisterVisitor( 'TXTRead', TVisTXTRead ) ;
+  gTIOPFManager.VisitorManager.RegisterVisitor( 'TXTSave', TVisTXTSave ) ;
+end.</pre>
+<p>This means we can build a GUI like this, with the ability to read and 
+write to and from different file formats.</p>
+<p><img width="307" height="193" alt="Form 05" src="2_TheVisitorFramework_Images/2_TheVisitorFramework_Form05.jpg"> </p>
+<p>Extra file formats can be easilly added by registering the reader and 
+writer Visitors with the Visitor manager.</p>
+<h2>Step #12. One final refactor</h2>
+<p>To prepare the code base for work with a relational database we will 
+refactor it one last time to break the Visitor classes, abstract business 
+classes, concrete business classes, abstract persistence classes and concrete 
+persistence classes into separate units. When this is done, our demo 
+application will have the following units and classes:</p>
+<table cellspacing="0" cellpadding="0">
+  <tr class="Normal">
+    <td width="130" valign="top"><p><strong> Unit name </strong></p></td>
+    <td width="170" valign="top"><p><strong> Purpose </strong></p></td>
+    <td width="189" valign="top"><p><strong> Classes </strong></p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="130" valign="top"><p> tiVisitor.pas </p></td>
+    <td width="170" valign="top"><p> Abstract Visitor and Visited classes</p></td>
+    <td width="189" valign="top"><p> TVisitor <br>
+        TVisited </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="130" valign="top"><p>  </p></td>
+    <td width="170" valign="top"><p> The Visitor Manager</p></td>
+    <td width="189" valign="top"><p> TVisMapping <br>
+        TtiVisitorManager </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="130" valign="top"><p> tiObject.pas </p></td>
+    <td width="170" valign="top"><p> Abstract business objects and business 
+object list classes</p></td>
+    <td width="189" valign="top"><p> TtiObjectList<br>
+        TtiObject </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="130" valign="top"><p> People_BOM.pas </p></td>
+    <td width="170" valign="top"><p> Concrete business objects</p></td>
+    <td width="189" valign="top"><p> TPerson<br>
+        TPeople </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="130" valign="top"><p> People_Srv.pas </p></td>
+    <td width="170" valign="top"><p> Concrete persistent classes</p></td>
+    <td width="189" valign="top"><p> TVisFile<br>
+        TVisTXTFile<br>
+        TVisCSVFile<br>
+        TVisCSVSave<br>
+        TVisCSVRead<br>
+        TVisTXTSave<br>
+        TVisTXTRead </p></td>
+  </tr>
+</table>
+<p>There are two things to notice about my file naming standard:</p>
+<ul>
+  <li> All the units that contain visitor related abstract classes are 
+prefixed tiPtnVis. This was based on an idea I had a while ago where by 
+all units that contain pattern implementations would be prefixed tiPtn and 
+placed in their own directory. This was a great idea at the time, but does 
+not really work in practice as multiple patterns can be found in several 
+units. We are unfortunately stuck with this standard because it would be to 
+much work to change the existing systems that use the framework.<br>
+  </li>
+  <li>The People classes are implemented in two units: People_BOM.pas and 
+People_Srv.pas. The _BOM unit contains the business object model, the _Srv.pas 
+unit contains the persistence classes (_Srv stands for server side class). 
+Sometimes, there will also be a _Cli.pas unit which will contain client side 
+code like a Singleton instance of a class, or a thread with a progress bar 
+to perform some lengthy database access and to keep the user amused while it 
+is taking place.</li>
+</ul>
+<h2>Summary</h2>
+<p>In this chapter we have looked at the problem of iterating over a 
+collection of objects, that may or may not be of the same type. We have 
+used GoF's Visitor pattern to perform an operation on 0 to many of 
+the objects then looked at how the text file read and write visitors can 
+be developed to persist a collection of objects to a text file.</p>
+<p>We have created an abstract TVisitor and TVisited class which define the 
+visitor-visited relationship. The TVisited descendants know how to pass an 
+instance of TVisitor over each object that it owns.</p>
+<p>We have descended from TVisitedAbs and created an abstract business 
+object class, and abstract business object collection class.</p>
+<p>We have create a Visitor manager which allows visitors that perform 
+different tasks to be registered and called by name. This allows us work 
+read and write from different file formats.</p>
+<h2>The next session</h2>
+<p>In the next session, we shall develop a family of visitors that will 
+read and write to a relational database. We shall also extend the abstract 
+business objects so they are able to pass a visitor over more complex data 
+structures. <a href="3_TheVisitorAndSQLDatabases.shtml">The next section can 
+be read here.</a><br>
+</p>
+
+<!--#include virtual="/Shared/Footer.html"-->
+
+</body>
+</html>

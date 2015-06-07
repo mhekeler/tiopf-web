@@ -1,0 +1,157 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/1999/REC-html401-19991224/loose.dtd">
+<html>
+<head>
+<meta name="GENERATOR" content="PasDoc 0.10.0">
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
+<title>tiVisitor: Class TtiVisitorManager</title>
+<link rel="StyleSheet" type="text/css" href="pasdoc.css">
+</head>
+<body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#800080" alink="#FF0000">
+<a name="TtiVisitorManager"></a><h1 class="cio">Class TtiVisitorManager</h1>
+<table class="sections wide_list">
+<tr>
+<td><a class="section"  href="#@Description">Description</a></td><td><a class="section"  href="#@Hierarchy">Hierarchy</a></td><td>Fields</td><td><a class="section"  href="#@Methods">Methods</a></td><td><a class="section"  href="#@Properties">Properties</a></td></tr></table>
+<a name="@Description"></a><h2 class="unit">Unit</h2>
+<p class="unitlink">
+<a   href="tiVisitor.html">tiVisitor</a></p>
+<h2 class="declaration">Declaration</h2>
+<p class="declaration">
+<code>type TtiVisitorManager = class(TtiBaseObject)</code></p>
+<h2 class="description">Description</h2>
+<p>
+Groups visitors together so they can be passed over a graph of objects together</p>
+<a name="@Hierarchy"></a><h2 class="hierarchy">Hierarchy</h2>
+<ul class="hierarchy"><li class="ancestor">TtiBaseObject</li>
+<li class="thisitem">TtiVisitorManager</li></ul><h2 class="overview">Overview</h2>
+<a name="@Methods"></a><h3 class="summary">Methods</h3>
+<table class="summary wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><code>function <b><a   href="tiVisitor.TtiVisitorManager.html#FindVisitorMappingGroup">FindVisitorMappingGroup</a></b>(const AGroupName: string): TtiVisitorMappingGroup; virtual;</code></td>
+</tr>
+<tr class="list2">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><code>procedure <b><a   href="tiVisitor.TtiVisitorManager.html#ProcessVisitors">ProcessVisitors</a></b>(const AGroupName: string; const AVisited: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a>; const AVisitorControllerConfig: TtiVisitorControllerConfig); virtual;</code></td>
+</tr>
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><code>function <b><a   href="tiVisitor.TtiVisitorManager.html#GetTIOPFManager">GetTIOPFManager</a></b>: TtiBaseObject; virtual;</code></td>
+</tr>
+<tr class="list2">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><code>constructor <b><a   href="tiVisitor.TtiVisitorManager.html#Create">Create</a></b>(const ATIOPFManager: TtiBaseObject); virtual;</code></td>
+</tr>
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><code>destructor <b><a   href="tiVisitor.TtiVisitorManager.html#Destroy">Destroy</a></b>; override;</code></td>
+</tr>
+<tr class="list2">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><code>procedure <b><a   href="tiVisitor.TtiVisitorManager.html#RegisterVisitor">RegisterVisitor</a></b>(const AGroupName: string; const AVisitorClass: <a   href="tiVisitor.html#TtiVisitorClass">TtiVisitorClass</a>);</code></td>
+</tr>
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><code>procedure <b><a   href="tiVisitor.TtiVisitorManager.html#UnRegisterVisitors">UnRegisterVisitors</a></b>(const AGroupName: string);</code></td>
+</tr>
+<tr class="list2">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><code>procedure <b><a   href="tiVisitor.TtiVisitorManager.html#Execute">Execute</a></b>(const AGroupName: string; const AVisited: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a>); overload; virtual;</code></td>
+</tr>
+</table>
+<a name="@Properties"></a><h3 class="summary">Properties</h3>
+<table class="summary wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><code>property <b><a   href="tiVisitor.TtiVisitorManager.html#VisitorMappings">VisitorMappings</a></b>: TList read GetVisitorMappings;</code></td>
+</tr>
+<tr class="list2">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><code>property <b><a   href="tiVisitor.TtiVisitorManager.html#TIOPFManager">TIOPFManager</a></b>: TtiBaseObject read <a   href="tiVisitor.TtiVisitorManager.html#GetTIOPFManager">GetTIOPFManager</a>;</code></td>
+</tr>
+</table>
+<h2 class="description">Description</h2>
+<h3 class="detail">Methods</h3>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><a name="FindVisitorMappingGroup"></a><code>function <b>FindVisitorMappingGroup</b>(const AGroupName: string): TtiVisitorMappingGroup; virtual;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><a name="ProcessVisitors"></a><code>procedure <b>ProcessVisitors</b>(const AGroupName: string; const AVisited: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a>; const AVisitorControllerConfig: TtiVisitorControllerConfig); virtual;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><a name="GetTIOPFManager"></a><code>function <b>GetTIOPFManager</b>: TtiBaseObject; virtual;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><a name="Create"></a><code>constructor <b>Create</b>(const ATIOPFManager: TtiBaseObject); virtual;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><a name="Destroy"></a><code>destructor <b>Destroy</b>; override;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><a name="RegisterVisitor"></a><code>procedure <b>RegisterVisitor</b>(const AGroupName: string; const AVisitorClass: <a   href="tiVisitor.html#TtiVisitorClass">TtiVisitorClass</a>);</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><a name="UnRegisterVisitors"></a><code>procedure <b>UnRegisterVisitors</b>(const AGroupName: string);</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><a name="Execute"></a><code>procedure <b>Execute</b>(const AGroupName: string; const AVisited: <a   href="tiVisitor.TtiVisited.html">TtiVisited</a>); overload; virtual;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<h3 class="detail">Properties</h3>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="protected.gif" alt="Protected" title="Protected"></a></td>
+<td class="itemcode"><a name="VisitorMappings"></a><code>property <b>VisitorMappings</b>: TList read GetVisitorMappings;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<table class="detail wide_list">
+<tr class="list">
+<td class="visibility"><a   href="legend.html"><img  src="public.gif" alt="Public" title="Public"></a></td>
+<td class="itemcode"><a name="TIOPFManager"></a><code>property <b>TIOPFManager</b>: TtiBaseObject read <a   href="tiVisitor.TtiVisitorManager.html#GetTIOPFManager">GetTIOPFManager</a>;</code></td>
+</tr>
+<tr><td colspan="2">
+&nbsp;</td></tr>
+</table>
+<hr noshade size="1"><span class="appinfo"><em>Generated by <a  target="_parent" href="http://pasdoc.sourceforge.net/">PasDoc 0.10.0</a> on 2008-03-11 17:55:49</em>
+</span>
+</body></html>

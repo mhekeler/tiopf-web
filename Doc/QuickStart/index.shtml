@@ -1,0 +1,170 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>tiOPF Quick Start</title>
+<!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>tiOPF Quick Start</h1>
+<h2>Introduction</h2>
+This document is a work in progress...<br>
+<br>
+This document will guide you through the process of building your first
+tiOPF application. The example will be trivial but will demonstrate the
+basic concepts of:<br>
+<ul>
+  <li>Creating a business object model or BOM;</li>
+  <li>Adding a user interface;</li>
+  <li>Adding persistence to XML;</li>
+  <li>Adding persistence to a relational database (we will use <a
+ href="http://www.firebirdsql.org/">Firebird</a> in this example);</li>
+  <li>The pros and cons of using tiOPF's object to relational mapping
+(which we call AutoMap);</li>
+  <li>How to hand craft your own classes to manage persistence (or
+Visitors).</li>
+</ul>
+The source code for this application is available from sourceforge as
+part of the demos download <a
+ href="http://sourceforge.net/project/showfiles.php?group_id=62469">here</a>,
+and directly from subversion by pointing your SVN client here: <a
+ href="https://svn.sourceforge.net/svnroot/tiopf/tiOPF2_Demos">https://svn.sourceforge.net/svnroot/tiopf/tiOPF2_Demos</a><br>
+<h2>The application we will build</h2>
+For this example, we will build a simple address book application:<br>
+<ul>
+  <li>We will maintain a list of people's names;</li>
+  <li>Each person may have one or many phone numbers;</li>
+</ul>
+Names and addresses are many times more complex than this to manage in
+real life, but the simplicity of this example will let us concentrate
+on some core concepts of the tiOPF.<br>
+<br>
+The class diagram of the business object model we will implement is
+shown below:<br>
+<br>
+<img style="width: 345px; height: 308px;" alt="Class diagram"
+ src="Images/ClassDiagram.jpg"><br>
+<br>
+The tiOPF provides our base classes: TtiObject and TtiObjectList. These
+impelment <a href="http://en.wikipedia.org/wiki/Design_Patterns">GoF's</a>
+Composite Pattern, which is described in more detail in the <a
+ href="../Concepts/4_BuildingAnAbstractBOMWithTheComposite.shtml">tiOPF
+Concepts Manual</a>.<br>
+<br>
+We shall implement three concrete classes:<br>
+<ul>
+  <li>TPeople - a container list for our TPerson(s) instances;</li>
+  <li>TPerson - a concrete person, and also a list of TPhoneNumber(s);</li>
+  <li>TPhoneNumber - a concrete phone number.</li>
+</ul>
+The TPeople shall own 0..many TPerson(s)<br>
+<br>
+Each TPerson shall own o..manu TPhoneNumber(s)<br>
+<br>
+An ER diagram of the database to persist these classes is shown below:<br>
+<br>
+<img style="width: 310px; height: 85px;" alt="ER Diagram"
+ src="Images/ERDiagram.jpg"><br>
+<br>
+The three classes shall map into the two tables as follows:<br>
+<br>
+<table style="text-align: left; width: 50%;" border="1" cellpadding="2"
+ cellspacing="2">
+  <tbody>
+    <tr>
+      <td style="vertical-align: top; font-weight: bold;">Class<br>
+      </td>
+      <td style="vertical-align: top; font-weight: bold;">Table<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">TPeople<br>
+      </td>
+      <td style="vertical-align: top;">No table, this is just a
+container class<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">TPerson<br>
+      </td>
+      <td style="vertical-align: top;">People<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">TPhoneNumber<br>
+      </td>
+      <td style="vertical-align: top;">Phone_Numbers<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
+The trick is that TPerson is both a business object that is persisted,
+and a container of TPhoneNumber(s), that are also persisted.<br>
+<h2>Installing the tiOPF</h2>
+If you have not already done it, <a href="../../Releases/Latest">download</a>
+and install the tiOPF following <a href="../Installing">these
+instructions</a>.<br>
+<br>
+If you are using BDS2006 (or another version that supports code
+templates), you may want to copy the code templates that are installed
+as part of the tiOPF from here:<br>
+<br>
+..\\tiOPF2\Trunk\Compilers\Delphi2006\code_templates<br>
+<br>
+to here<br>
+<br>
+C:\Documents and Settings\[USERNAME]\Local Settings\Application
+Data\Borland\BDS\4.0\code_templates<br>
+<br>
+(I actually check them out from Subversion directly to this directory.)<br>
+<h2>Create a directory tree</h2>
+Create a directory to store your project, then add the following sub
+directories:<br>
+<ul>
+  <li>Common - for the Business Object Model, units;</li>
+  <li>GUI - for the user interface;</li>
+  <li>UnitTests - for the tests;</li>
+  <li>_dcu - for object files;</li>
+  <li>_bin - for binary files.</li>
+</ul>
+Create a project group called AdrsBook_ProjectGroup and save it to your
+root directory.<br>
+<br>
+Create a new VCL Forms application called AdrsBook and save it to the
+GUI directory. <br>
+<br>
+Save the main form as FMain.pas<br>
+<br>
+We will get to the unit test application later.<br>
+<br>
+In the Project | Options dialog, set the Output Directory to ..\_bin
+and the Unit output directory to ..\_dcu<br>
+<h2><span style="font-weight: bold;"></span>Creating the business
+object model (BOM)</h2>
+Create an empty pas file called AdrsBook_BOM.pas and save it to the
+Common directory. In the tiOPF, we use
+the suffix _BOM for units contain a Business Object Model.<br>
+<h2>Adding a quick and dirty user interface</h2>
+<br>
+<br>
+<h2>Adding persistence to XML</h2>
+<br>
+<br>
+<h2>Adding persistence to Firebird database<br>
+</h2>
+<br>
+<br>
+<h2>Automap or hand crafted visitors?</h2>
+<br>
+<br>
+<h2>Hand crafting your visitors</h2>
+<br>
+<br>
+<h2>Adding unit tests</h2>
+<br>
+<br>
+<h2>Conclusion</h2>
+<!--#include virtual="/Shared/Footer.html"-->
+</body>
+</html>

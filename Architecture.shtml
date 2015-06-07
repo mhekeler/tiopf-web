@@ -1,0 +1,47 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>TechInsite - tiOFP Architecture</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+
+<h1>tiOFP Architecture </h1> 
+<h2>The three layers of the tiOPF</h2>
+<p>The TechInsite Object Persistence Framework is based on a three layer architecture:</p>
+<ol>
+  <li><strong>The business object model (BOM)</strong>. The BOM is where the objects that model the business system, and their internal data structures are defined. The relationships these objects have with each other are also modeled, along with some basic business rules like &lsquo;A person can have 0 to many addresses.&rsquo; The design of the abstract business object model is discussed in detail in chapter 4.<br>
+  </li>
+  <li><strong>The presentation layer.</strong> The presentation layer is where the user interacts with the BOM. It can be a Windows GUI, a HTML page or an interface into another business system. These possible configurations are shown in the diagrams below. The GUI controls that come with the tiOFP are documented by way of demonstrations that are included with the source. These controls are also used in the worked example in chapter 6.<br>
+  </li>
+  <li><strong>The persistence layer.</strong> The persistence layer is where it is made easy to save objects to a database. One of the principle aims of the persistence layer is to make it possible to write code like gTIPerMgr.Save( FMyComplexData ) ; and to know that all objects in FMyComplexData will be saved in the correct way, depending on weather the objects must be created in the database, updated or deleted. A good persistence layer will also make it easy to swap databases at application startup, or on the fly so data can be read from one persistence store, manipulated then saved to another persistent store. The persistence layer that is implemented in the tiOPF is based on GoF&rsquo;s Visitor, Template Method and Adaptor patterns. This is discussed in chapters 2, 3 and 7.</li>
+</ol>
+<h2>Possible configurations of the tiOPF</h2>
+<p>There are several possible configurations of the tiOPF, and four of them are discussed below. These include configurations for:</p>
+<p>&bull; Two-tier, client server application built using Win32 GUI.<br>
+&bull; Multi tier application build using Win32 GUI and HTTP / XML as the data carrier<br>
+&bull; Browser based HTML client with server side business objects.<br>
+&bull; System to System application with no client for human interaction</p>
+<h2>Two-tier, client server application built using Win32 GUI.</h2>
+<p>The diagram below shows the tiOPF configured for a &lsquo;conventional&rsquo; two-tier or client-server application. There are three layers within the application that are compiled into a single application. The presentation layer and business object model are in the same physical executable, and the persistence manager and persistence plugin can be in the same executable, or could be deployed as separate &lsquo;Packages&rsquo; or DLLs. This is the most common way of building a tiOPF application, and is how the demonstration that comes with the source is architected. This architecture will be used in chapter 6 when we look at a worked example of using the tiOPF.</p>
+<p>  
+
+
+  <img width="464" height="258" src="Images/Architecture_Win32.jpg"> </p>
+<h2>Multi tier application build using Win32 GUI and HTTP / XML as the data carrier</h2>
+<p>The diagram below shows the tiOPF configured as a multi tier application with two instances of the persistence manager and persistence plugin running. On the client, the presentation layer and business object model are running, with an instance of the persistence manager. There is a persistence plugin which knows how to talk to a web server (or web service) using HTTP and XML. The web service is running another instance of the persistence manager and a persistence plugin which allows it to talk to the database.</p>
+<p>This approach uses a &lsquo;fat client&rsquo; were significant intelligence is build into the client, and a thin server, when the server knows how to read and save objects, but does not implement any business rules. There are many disadvantages to this architecture such as having to manage the deployment of the relatively bulky client (this can be automated using the deployment manager application that comes with the source). There &lsquo;killer&rsquo; advantage to this architecture however, is that the same windows client can be used in system that connects from outside a firewall via a web server, as is used to connect directly to the database behind the firewall. This is achieved by simply swapping the persistence plugin.</p>
+<p>There are two applications included with the source called the tiDeployMgr and tiAppLauncher. The tiDeployMgr makes it possible to save an application, and associated binaries to a database along with file size, date and time and version information. When the tiAppLauncher connects to the database, it version checks the files deployed on your local hard drive and updates them as necessary. It then launches the application that will be using XML and HTTP as the communication back to the database via a web server. There is an ActiveX version of the tiAppLauncher that can be imbedded in a HTML page for web based launching.</p>
+<p> <img width="464" height="238" src="Images/Architecture_MultiTier.jpg"> </p>
+<h2>Browser based HTML client with server side business objects.</h2>
+<p>The diagram below shows the framework reconfigured to run with the business object model, persistence manager and persistence plugin running under a web server. The application produces HTML pages which are viewed inside a web browser. I have not used the framework in this way, but it is, in theory possible.</p>
+<p> <img width="464" height="240" src="Images/Architecture_BrowserClient.jpg"> </p>
+<h2>System to System application with no client for human interaction</h2>
+<p>The last diagram shows the tiOPF configured as an interface between two disparate business systems. This is a technique I have used regularly for moving data from a legacy system via, say a CSV or XML file. A business object model is designed to represent the data, then two persistence plugins are deployed, one on the legacy database side and one on the new database side. This architecture becomes especially useful when a Windows GUI is also required for manipulating the data and can reuse both the business object model and the persistence code.</p>
+<p> <img width="464" height="244" src="Images/Architecture_Service.jpg"> </p>
+<p><br>
+</p>
+<!--#include virtual="/Shared/Footer.html"-->
+</body>
+</html>

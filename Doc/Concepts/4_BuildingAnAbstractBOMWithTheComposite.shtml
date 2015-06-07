@@ -1,0 +1,1069 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>tiOPF Documentation - Building an abstract BOM with the composite pattern</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>4. Building an Abstract BOM with the Composite Pattern </h1> 
+<h1 class="Normal">The aims of this section </h1>
+<p>In the previous two chapters we investigated how the Visitor and Template Method patterns can be used together to manage objects that are saved to either a custom text file, or a relational database. In these chapters, we started to develop an abstract collection class, and abstract business object class and we will extend these classes, adding more of the functionality that will be required in a complex business system.</p>
+<h2>Prerequisites</h2>
+<p>This chapter builds on the concepts introduced in chapter #2 &lsquo;The Visitor Framework&rsquo; so it will be a good idea to read this chapter first.</p>
+<p>The business problem we will work with as an example</p>
+<p>The previous business object model</p>
+<p>We will continue to develop the contact management application, and will extend the business object model to represent the data more realistically. In the previous chapter, we created a TPerson class and its corresponding collection class TPeople. This class diagram looked like this:</p>
+<p> <img width="275" height="89" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image001.gif"> </p>
+<p>Rework the address book BOM to better represent the business domain</p>
+<p>We shall do several things to improve this business object model. Firstly, the properties that a TPerson can have shall be replaced by the more usual LastName, FirstName, Title and Initials. Secondly, instead of each person only being able to have one EMail address, we shall allow them to have a list of what we will call E-Addresses. An E-Address shall be a one-line address that can contain a phone number, fax number, email address or web URL. (The example application &lsquo;DemoTIPerFramework&rsquo; extends this model further so people can have street or post office box addresses too.) The UML of the extended TPerson family of classes looks like this:</p>
+<p> <img width="427" height="280" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image002.jpg"> </p>
+<p>From this diagram we can see four classes:</p>
+<table cellspacing="0" cellpadding="0">
+  <tr class="Normal">
+    <td width="111" valign="top"><p><strong> Class </strong></p></td>
+    <td width="479" valign="top"><p><strong> Description </strong></p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="111" valign="top"><p> TPeople </p></td>
+    <td width="479" valign="top"><p> A list of TPerson(s). Descends from TPerVisList and implements list management methods like GetItems( I ) : TPerson and Add( pData : TPerson ) </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="111" valign="top"><p> TPerson </p></td>
+    <td width="479" valign="top"><p> A person object that descends from TPerObjAbs. Owned by TPeople. Has published properties for LastName, FirstName, Title and Initials. Has a property EAdrsList that is of type TEAdrsList to hold a list of E-Addresses. </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="111" valign="top"><p> TAdrsList </p></td>
+    <td width="479" valign="top"><p> A container for TEAdrs objects, descends from TPerVisList </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="111" valign="top"><p> TEAdrs </p></td>
+    <td width="479" valign="top"><p> An electronic address object that belong to the TPerson. Descends from TPerObjAbs and has properties Address type and address text. </p></td>
+  </tr>
+</table>
+<p>We shall concentrate on implementing a useful abstract business object and business object list first, then implement concrete classes towards the end of this chapter. After we have implemented the class structure, we shall write some helper functions that use the features in the abstract business objects to output the class hierarchy as text for debugging, or to search a hierarchy for an object with a given set of properties..</p>
+<h2>The Composite pattern &ndash; what GoF say</h2>
+<p>The intent of the Composite, as quoted from &lsquo;Design Patterns&rsquo;: Compose objects into tree structures to represent whole-part hierarchies. Composite lets clients treat individual objects and compositions of objects uniformly.</p>
+<h2>Implementing the abstract business object model</h2>
+<p>A type safe relationship between the collection and business objects</p>
+<p>The first thing we shall do is to establish the relationship between the abstract collection class and the abstract business object class. The Composite pattern has introduced us to the idea of treating list objects and regular business objects as the same type of class, so we shall continue with the idea of the collection class descending from the business object class. The UML representing the relationship, which we setup in a pervious chapter looks like this:</p>
+<p> <img width="346" height="290" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image001_0000.gif"> </p>
+<p>The Visitor &ndash; Visited relationship was discussed in chapter #2. Our abstract persistent objects will descend from TVisited because we want to be able to pass visitors over collections of objects with as little work as possible from the programmer. We will be focusing on the relationship between TPerObjAbs and TPerObjList next, but first we will add the list like behavior to TPerObjList.</p>
+<h2>Adding list behavior to TPerObjAbs</h2>
+<p>The first question is what behavior should we be adding to TPerObjAbs to turn it into a useful collection class? Delphi&rsquo;s TList help text provides a good starting point as it details the properties and methods of the TList class. These are shown below:</p>
+<table cellspacing="0" cellpadding="0">
+  <tr>
+    <td width="295" valign="top"><p align="center"><strong> Properties </strong></p></td>
+    <td width="295" valign="top"><p align="center"><strong> Methods </strong></p></td>
+  </tr>
+  <tr>
+    <td width="295" valign="top"><p align="center">&nbsp; </p>
+        <p align="center"><img width="197" height="145" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image002_0000.jpg"></p></td>
+    <td width="295" valign="top"><p align="center">&nbsp; </p>
+        <p align="center"><img width="165" height="320" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image004.jpg"></p></td>
+  </tr>
+</table>
+<p>Of these, we will start by adding the properties Items and Count, and the methods Add, Clear, Delete, First, IndexOf, Insert, Last and Remove. To make it as easy as possible for developers who are new to the framework, we will give the methods the same signature (or parameters and return type) as in Delphi&rsquo;s TList class, with one change: Where the TList takes a TObject or Pointer as a parameter, we will substitute a TPerObjAbs. Here is the class diagram:</p>
+<p> <img width="368" height="224" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image001_0001.gif"> </p>
+<p>The interface of TPerObjList is shown below:</p>
+<pre>
+TPerObjList = class( TPerObjAbs )
+private
+  FList : TObjectList ;
+  function GetList: TList;
+protected
+  function GetItems(pIndex: integer): TPerObjAbs; virtual ;
+  procedure SetItems(pIndex: integer; const Value: TPerObjAbs); virtual ;
+  function GetCount: integer; virtual;
+public
+  // Constructor &amp; Destructor
+  constructor Create ; override ;
+  destructor Destroy ; override ;
+  // Public properties
+  property List : TList read GetList ;
+  property Items[ pIndex : integer ] : TPerObjAbs read GetItems write SetItems ;
+  property Count : integer read GetCount ;
+  // Public methods
+  procedure Add( pData : TObject ) ; virtual ;
+  procedure Clear ; virtual ;
+  procedure Delete( pIndex : integer ) ; virtual ;
+  function First : TPerObjAbs ; virtual ;
+  function IndexOf( pData : TPerObjAbs ) : integer ; virtual ;
+  procedure Insert( pIndex : integer ; pData : TPerObjAbs ) ; virtual ;
+  function Last : TPerObjAbs ; virtual ;
+  procedure Remove( pData : TPerObjAbs ) ; virtual ;
+  // The Iterate method is still overridden here as we are using the code
+  // base we developed in the earlier chapter on the Visitor
+  procedure Iterate( pVisitor : TVisitor ) ; override ;
+end ;</pre>
+<p>The implementation of TPerObjList is rather dull as each method simply delegates the work to the owned TObjectList (with some type casting as necessary) like this:</p>
+<pre>
+function TPerObjList.Last: TPerObjAbs;
+begin
+  result := TPerObjAbs( FList.Last ) ;
+end;</pre>
+<p>We shall add one extra property to TPerObjAbs called &quot;owner&quot;. Owner will behave in much the same way that Delphi's TComponent.Owner property behaves. When we add an object to a TPerObjList, we shall take the opportunity to set its owner property as shown below:</p>
+<pre>
+procedure TPerObjList.Add(pData: TObject);
+begin
+  FList.Add( pData ) ;
+  pData.Owner := Self ;
+end;</pre>
+<p>The details of the relationship between TPerObjAbs and TPerObjList are shown in the UML below.</p>
+<p> <img width="421" height="293" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image001_0002.gif"> </p>
+<p>This diagram tells us 3 things.</p>
+  <ol>
+    <li>TPerObjList inherits from TPerObjAbs. This means we can treat both classes in the same way. This has significant benefits when we start building concrete business classes.
+
+    </li>
+    <li>TPerObjList maintains an internal list of TPerObjAbs. This list can contain 0 or many instances of TPerObjAbs. The owned instances of TPerObjAbs are indexed by the Items property.</li>
+    <li>TPerObjAbs has a property Owner of type TPerObjAbs. If a TPerObjList owns an instance of TPerObjAbs, the owner property of the TPerObjAbs will have been set to the instance of TPerObjList in its Add method. If a TPerObjAbs owns another TPerObjAbs, the programmer will have to set the Owner property manually in code.</li>
+  </ol>
+  <p>The need to make the iterate method generic</p>
+<p>Now that we have coded a firm relationship between TPerObjAbs and TPerObjList, we can look at how to make the iterate method more generic. The implementation of iterate that we developed in chapter #2 looks like this:</p>
+<pre>
+procedure TPerObjList.Iterate(pVisitor: TVisitor);
+var
+  i : integer ;
+begin
+  inherited Iterate( pVisitor ) ;
+  for i := 0 to FList.Count - 1 do
+    ( FList.Items[i] as TVisited ).Iterate( pVisitor ) ;
+end;</pre>
+<p>This approach is fine as long as we keep our class hierarchy linear like this:</p>
+<p> <img width="313" height="155" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image001_0003.gif"> </p>
+<p>The TPeople own a list of TPerson(s) that own a list of TEAdrs(s). This can be implemented by chaining two TPerObjList classes together, with a TPerObjAbs tacked on the end.</p>
+<p>If we call iterate at the top of the tree, passing a visitor like FPeople.Itereate( TVisDoSomething ) we will be guaranteed of the visitor touching all the elements in the hierarchy. But what if we want to create a class hierarchy like the one shown below, where each TPerson owns two lists: one of TEAdrs(s) and one of TAdrs(s)?</p>
+<p> <img width="314" height="139" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image001_0004.gif"> </p>
+<p>Within our Composite pattern framework, there are three ways of achieving this:</p>
+<p>1. TPerson descends from TPerObjList (which gives us a holder for the TEAdrs objects) and we add another TObjectList to hold the TAdrs(s), like this:</p>
+<p> <img width="229" height="213" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image001_0005.gif"> </p>
+<p>2. TPerson descends from TPerObjAbs, and we add two TObjectList(s); One to hold the TEAdrs(s) and one to hold the TAdrs(s) like this:</p>
+<p> <img width="241" height="217" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image001_0006.gif"> </p>
+<p>3. We create two more classes: TEAdrsList, which holds TEAdrs(s); and TAdrsList, which holds TAdrs(s). We add an instance of TEAdrsList and TEAdrsList to the TPerson class, like this:</p>
+<p> <img width="396" height="223" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image001_0007.gif"> </p>
+<p>I tend to use (3) in real life systems because it allows me to tightly couple each list to the classes it will hold. This makes for a much more robust application from a programmer&rsquo;s point of view.</p>
+<p>In the following examples, we shall start by writing a Visitor to convert the objects to text so it is easier to look inside the class hierarchy for debugging. Next, shall implement (2) because it is an easier way to get started then move onto implementing (3) as we fine tune our iterate functionality.</p>
+<h2>Delphi versions</h2>
+<p>Before going any further, a word about Delphi versions. Most of the code we are going to look at over the next few sections was developed in Delphi 5 and uses some procedures that where added to TypInfo.pas with the release of version 5. These procedures make it much easier to use RTTI than in previous Delphi versions so the examples will not work with Delphi four or below. At the time of writing, the framework has not been tested with Delphi 6, however other users have reported the need to change some unit names to get the code compiling.</p>
+<h2>A Visitor to show a class hierarchy as text for debugging</h2>
+<p>Our aim is to write a generic iterate method, but to test this method and help with debugging, we will write two helper procedures, and a Visitor to output a TPerObjAbs hierarchy as text.</p>
+<p>The helper functions we want have a signature like this:</p>
+<pre>// Convert a TPerObjAbs hierarchy to a stringfunction 
+tiPerObjAbsAsString( pVisited : TPerObjAbs ) : string ;        
+
+// Show a TPerObjAbs hierarchy   
+procedure tiShowPerObjAbs( pVisited : TPerObjAbs ) ; </pre>
+<p>We shall create a text output Visitor that will have an interface like this:</p>
+<pre>
+TVisPerObjToText = class( TVisitor )
+private
+  FStream: TStringStream;
+protected
+  function AcceptVisitor : boolean ; override ;
+public
+  constructor Create ; override ;
+  destructor Destroy ; override;
+  procedure Execute( pVisited : TVisited ) ; override ;
+  property Stream : TStringStream read FStream ;
+end ;</pre>
+<p>TVisPerObjToText has the usual AcceptVisitor and Execute methods that we have now come to expect to find in a TVisitor descendent, along with an owned TStringStream to write our data out to.</p>
+<p>The key method is Execute and its implementation looks like this:</p>
+<pre>
+procedure TVisPerObjToText.Execute(pVisited: TVisited);
+var
+  i : integer ;
+  lslProps : TStringList ;
+  lsValue : string ;
+  lsPropName : string ;
+begin
+  inherited Execute( pVisited ) ;
+  if not AcceptVisitor then
+    Exit ; //==&gt;
+  // Write out the class name of the object we are visiting.
+  FStream.WriteString( Visited.ClassName + #13 + #10 ) ;
+  // Create a string list to hold a list of property names
+  lslProps := TStringList.Create ;
+  try
+    // Populate the string list, lslProps with a list of published
+    // property names read from pVisited. The properties should be
+    // simple data types like string or integer only.
+    // No class propeties at this stage.
+    tiGetPropertyNames( TPersistent( pVisited ),
+                        lslProps,
+                        ctkSimple + [tkVariant, tkEnumeration] ) ;
+    // Scan the list of property names and write out the values for each one
+    for i := 0 to lslProps.Count - 1 do 
+	begin
+      // Get the property name from the list
+      lsPropName := lslProps.Strings[i] ;
+      // Get the property value (the third parameter means we want a string)
+      lsValue := GetPropValue( pVisited, lsPropName, true ) ;
+      lsValue := ' ' +
+        lslProps.Strings[i] +
+        ' = ' +
+        lsValue ;
+      // Write out the property name and value
+      FStream.WriteString( lsValue + #13 + #10 ) ;
+    end ;
+  finally
+    lslProps.Free ;
+  end ;
+end;</pre>
+<p>A note about GetPropValue and SetPropValue: </p>
+<p>There are several things going on in this Execute method. Firstly we write out the class name of the object being visited. Next we create a TStringList to hold a list of published property names read from the class being visited. We then call tiGetPropertyNames to populate this list. tiGetPropertyNames is central to everything we shall do with iteration from now on and we will look at its implementation in just a second. Once we have a list of property names, we scan the list and write name = value pairs for each property and its corresponding value.</p>
+<p>To create and execute this visitor we have the two helper functions tiPerObjAbsAsString and tiShowPerObjAbs. The implementation of tiPerObjAbsAsString looks like this:</p>
+<pre>
+function tiPerObjAbsAsString( pVisited : TPerObjAbs ) : string ;
+var
+  lVis : TVisPerObjToText ;
+begin
+  lVis := TVisPerObjToText.Create ;
+  try
+    pVisited.Iterate( lVis ) ;
+    result := lVis.Stream.DataString ;
+  finally
+    lVis.Free ;
+  end ;
+end ;</pre>
+<p>An instance of TVisPerObjToText is created then passed to the iterate method of the object at the top of the class hierarchy we want to display. The visitor writes out its data to the TStringStream then we read this information and pass it back as the function&rsquo;s result.</p>
+<p>The second helper function tiShowPerObjAbs is used to call tiPerObjAbsAsString and display its value. The implementation of tiShowPerObjAbs looks like this:</p>
+<pre>
+procedure tiShowPerObjAbs( pVisited : TPerObjAbs ) ;
+begin
+  ShowMessage( tiPerObjAbsAsString( pVisited )) ;
+end ;</pre>
+<p>The data we stored in an Interbase database in the previous section looks like this when it is displayed </p>
+<p> <img width="235" height="170" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image002_0001.jpg"> </p>
+<p>The implementation of these two functions in the tiOPF uses the same concepts, but it indents values so it is easier to see which class owns what. The data is shown using a dialog with a scrolling text region (with a fixed with font) because some object hierarchies can be very big and overflow when displayed with ShowMessage.</p>
+<h2>Getting a list of property names with tiGetPropertyNames</h2>
+<p>The method tiGetPropertyNames is fundamental to the core of the tiOPF. If you are an interface zealot, and you are offended at the concept of using Delphi&rsquo;s Run Time Type Information (RTTI) at the heart of the framework, the now is a good time to stop reading. From now on, we will be using tiGetPropertyNames everywhere. For example, RTTI is used for these purposes:</p>
+<ul>
+  <li> At the lowest level of the hierarchy to control the iteration over owned objects</li>
+  <li> In the TtiListView for reading what columns of data to display</li>
+  <li> In the TtiTreeView for reading nested objects and the data to display</li>
+  <li> In the TtiPerAware edit controls for linking a TPerObjAbs up to the control</li>
+  <li> In the TPerObjAbs&rsquo;s Assign and Clone methods which are used for copying objects</li>
+  <li> In the class-to-database mapping framework which lets us read complex hierarchies of objects without writing any SQL</li>
+</ul>
+<p>There are other ways of achieving this than RTTI, however Delphi makes all this easy with RTTI so why not use it?</p>
+<p>tiGetPropertyNames is overloaded and the two possible interfaces are shown below:</p>
+<pre>
+procedure tiGetPropertyNames( pPersistent : TPersistent ;
+   pSL : TStringList ;
+   pPropFilter : TTypeKinds = ctkSimple ) ; overload ;
+procedure tiGetPropertyNames( pPersistent : TPersistentClass ;
+   pSL : TStringList ;
+   pPropFilter : TTypeKinds = ctkSimple ) ; overload ;</pre>
+<p>Three parameters are passed: pPersistent which is either an instance of a TPersistent, or a TPersistent class type, a string list to hold the resulting property names and a property filter which contains a list of the property types to be read into the string list.</p>
+<pre>
+procedure tiGetPropertyNames( pPersistent : TPersistentClass ;
+   pSL : TStringList ;
+   pPropFilter : TTypeKinds = ctkSimple ) ;
+var
+  lCount : integer ;
+  lSize : integer ;
+  lList : PPropList ;
+  i : integer ;
+begin
+  lCount := GetPropList(pPersistent.ClassInfo, pPropFilter, nil);
+  lSize := lCount * SizeOf(Pointer);
+  GetMem(lList, lSize);
+  try
+    GetPropList(pPersistent.ClassInfo, pPropFilter, lList);
+    for i := 0 to lcount - 1 do
+    psl.add( lList[i].Name ) ;
+  finally
+    FreeMem( lList, lSize ) ;
+  end ;
+   end ;</pre>
+<p>Now I am happy to confess that I don't totally understand this code, except to say that GetPropList is declared in the TypInfo.pas unit. If you search the Delphi 5 VCL code you will find it called only once in the entire VCL in DsgnIntf.pas and its this code that I used to work out how to read a list of property names.</p>
+<pre>
+constructor TPropInfoList.Create(Instance: TPersistent; Filter: TTypeKinds);
+begin
+  FCount := GetPropList(Instance.ClassInfo, Filter, nil);
+  FSize := FCount * SizeOf(Pointer);
+  GetMem(FList, FSize);
+  GetPropList(Instance.ClassInfo, Filter, FList);
+end;</pre>
+<p>I don't understand it, but it does work and works well.</p>
+<p>The third parameter passed to tiGetPropertyNames is a set of TTypeKind. A TTypeKind can be any of the following:</p>
+<pre>TTypeKind = (tkUnknown, tkInteger, tkChar, tkEnumeration, tkFloat,
+   tkString, tkSet, tkClass, tkMethod, tkWChar, tkLString, tkWString,
+   tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray);</pre>
+<p>In tiUtils.pas I have declared the following constants to make using tiGetPropertyNames easier:</p>
+<pre>
+const
+  // Type kinds for use with tiGetPropertyNames
+  // All string type properties
+  ctkString = [ tkChar, tkString, tkWChar, tkLString, tkWString ] ;
+  // Integer type properties
+  ctkInt = [ tkInteger, tkInt64 ] ;
+  // Float type properties
+  ctkFloat = [ tkFloat ] ;
+  // Numeric type properties
+  ctkNumeric = [tkInteger, tkInt64, tkFloat];
+  // All simple types (string, int, float)
+  ctkSimple = ctkString + ctkInt + ctkFloat ;</pre>
+<p>This makes calls to tiGetPropertyNames like this possible:</p>
+<pre>
+  // Populate lslProps with a list of string type properties
+  tiGetPropertyNames( FMyData, lslProps, ctkString ) ;
+  // Populate lslProps with a list of numeric type properties
+  tiGetPropertyNames( FMyData, lslProps, ctkNumeric ) ;
+  // Populate lslProps with a list of properties that are not objects or methods 
+  tiGetPropertyNames( FMyData, lslProps, ctkSimple + [tkVariant, tkEnumeration]) ;
+  // Populate lslProps with a list of properties that are objects
+  tiGetPropertyNames( FMyData, lslProps, [tkClass]) ;</pre>
+<p>It is the last call, tiGetPropertyNames( FMyData, lslProps, [tkClass]) that we will used to make our iteration method generic.</p>
+<h2>A word about TPersistent and published properties</h2>
+<p>Delphi's help tells us this about TPersistent:</p>
+<p>TPersistent encapsulates the behavior common to all objects that can be assigned to other objects, and that can read and write their properties to and from a stream. For this purpose TPersisent introduces methods that can be overriden to:</p>
+<p>Define the procedure for loading and storing unpublished data to a stream.<br>
+  Provide the means to assign values to properties.<br>
+  Provide the means to assign the contents of one object to another.</p>
+<p>If we take a look inside Classes.pas, we see that the interface of TPersistent looks like this:</p>
+<pre>
+{$M+}
+TPersistent = class(TObject)
+private
+  procedure AssignError(Source: TPersistent);
+protected
+  procedure AssignTo(Dest: TPersistent); virtual;
+  procedure DefineProperties(Filer: TFiler); virtual;
+  function GetOwner: TPersistent; dynamic;
+public
+  destructor Destroy; override;
+  procedure Assign(Source: TPersistent); virtual;
+  function GetNamePath: string; dynamic;
+end;
+{$M-}</pre>
+<p>The {$M+} compiler directive that surrounds the TPersistent interface looks interesting and we learn from the Delphi help text that it is $M that turns on RTTI. The help text tells us this about $M</p>
+<p>The $M switch directive controls generation of runtime type information (RTTI). When a class is declared in the {$M+} state, or is derived from a class that was declared in the {$M+} state, the compiler generates runtime type information for fields, methods, and properties that are declared in a published section. If a class is declared in the {$M-} state, and is not derived from a class that was declared in the {$M+} state, published sections are not allowed in the class.</p>
+<p>Note: The TPersistent class defined in the Classes unit of the VCL is declared in the {$M+} state, so any class derived from TPersistent will have RTTI generated for its published sections. The VCL uses the runtime type information generated for published sections to access the values of a component's properties when saving or loading form files. Furthermore, the Delphi IDE uses a component's runtime type information to determine the list of properties to show in the Object Inspector.</p>
+<p>Now, we have two choices for the parent class of our business objects: TPersistent or TObject with the $M switch turned on in the classes interface. We have used TPersistent in the tiOPF because the framework code predates my knowledge of the $M switch. (ADUG member Mat Vincent only introduced me about the existence of the $M switch a short time long ago.)</p>
+<p>If we look inside TPersistent.Assign, we see that the call is delegated to TPersistent.AssignTo, which in turn delegates the call to TPersistent.AssignError. The implementation of TPersistent.AssignError looks like this:</p>
+<pre>
+procedure TPersistent.AssignError(Source: TPersistent);
+var
+  SourceName: string;
+begin
+  if Source &lt;&gt; nil then
+    SourceName := Source.ClassName 
+  else
+    SourceName := 'nil';
+  raise EConvertError.CreateResFmt(@SAssignError, [SourceName, ClassName]);
+end;</pre>
+<p>So, TPersistent.Assing dose little other than raise an exception if it is not overridden and implemented in a concrete class. We better remember that when it comes time to write a generic Assign method.</p>
+<h2>Create some concrete objects to iterate over</h2>
+<p>Before we can go much further with developing a generic iterate method, we better create a test stub to evaluate our progress. We will create some concrete instances of the TPeople &ndash; TPerson &ndash; TAdrs and TEAdrs objects discussed in the previous section. As a reminder, the UML of the business object model we will implement is shown below:</p>
+<p> <img width="314" height="139" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image001_0008.gif"> </p>
+<p>This will be implemented by descending TPeople form TPerObjList, and TPerson from TPerObjAbs. TPerson will own two TObjectLists to contain the TEAdrs(s) and TAdrs(s). Both these lists will be published to allow RTTI to work. The interface section of the unit that contains this class hierarchy is shown below:</p>
+<pre>
+TPeople = class( TPerObjList ) ;
+TPerson = class( TPerObjAbs )
+private
+  FName: string;
+  FEAdrsList : TObjectList ;
+  FAdrsList : TObjectList ;
+  function GetAdrsList: TList;
+  function GetEAdrsList: TList;
+public
+  constructor Create ; override ;
+  destructor Destroy ; override ;
+published
+  property Name : string read FName write FName ;
+  property EAdrsList : TList read GetEAdrsList ;
+  property AdrsList : TList read GetAdrsList ;
+end ;
+
+TAdrs = class( TPerObjAbs )
+private
+  FSuburb: string;
+  FAdrsType: string;
+  FCountry: string;
+  FLines: string;
+published
+  property AdrsType : string read FAdrsType write FAdrsType ;
+  property Lines : string read FLines write FLines ;
+  property Suburb : string read FSuburb write FSuburb ;
+  property Country : string read FCountry write FCountry ;
+end ;
+
+TEAdrs = class( TPerObjAbs )
+private
+  FAdrsType: string;
+  FText: string;
+published
+  property AdrsType : string read FAdrsType write FAdrsType ;
+  property Text : string read FText write FText ;
+end ;</pre>
+<p>We shall hard code some test data like this:</p>
+<pre>
+procedure PopulatePeopleWithHardCodedData( pPeople : TPeople ) ;
+var
+  lPerson : TPerson ;
+  lAdrs : TAdrs ;
+  lEAdrs : TEAdrs ;
+begin
+  pPeople.List.Clear ;
+  lPerson := TPerson.Create ;
+  lPerson.Name := 'Peter Hinrichsen' ;
+  pPeople.Add( lPerson ) ;
+  lAdrs := TAdrs.Create ;
+  lAdrs.AdrsType := 'Work-Postal' ;
+  lAdrs.Lines := 'PO Box 429' ;
+  lAdrs.Suburb := 'Abbotsford' ;
+  lAdrs.Country := 'Australia' ;
+  lPerson.AdrsList.Add( lAdrs ) ;
+  lAdrs := TAdrs.Create ;
+  lAdrs.AdrsType := 'Work-Street' ;
+  lAdrs.Lines := '23 Victoria Pde' ;
+  lAdrs.Suburb := 'Collingwood' ;
+  lAdrs.Country := 'Australia' ;
+  lPerson.AdrsList.Add( lAdrs ) ;
+  lEAdrs := TEAdrs.Create ;
+  lEAdrs.AdrsType := 'EMail' ;
+  lEAdrs.Text := 'peter_hinrichsen@dontspamme.com' ;
+  lPerson.EAdrsList.Add( lEAdrs ) ;
+  lEAdrs := TEAdrs.Create ;
+  lEAdrs.AdrsType := 'Web' ;
+  lEAdrs.Text := 'www.tiopf.com' ;
+  lPerson.EAdrsList.Add( lEAdrs ) ;
+  lEAdrs := TEAdrs.Create ;
+  lEAdrs.AdrsType := 'Phone' ;
+  lEAdrs.Text := '+61 3 9419 6456' ;
+  lPerson.EAdrsList.Add( lEAdrs ) ;
+end;</pre>
+<p>We can now test the tiShowPerObjAbs procedure and as expected will see the TPeople and TPerson, but the iterate method will stop at this level because it does not know about the existence of either AdrsList or EAdrsList. The result of the call to tiShowPerObjAbs is shown below:</p>
+<p> <img width="154" height="142" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image001_0009.gif"> </p>
+<h2>Override Iterate</h2>
+<p>One way of solving this problem is to override the TPerson.Iterate method like this:</p>
+<pre>
+procedure TPerson.Iterate(pVisitor: TVisitor);
+var
+  i : integer ;
+begin
+  inherited Iterate( pVisitor ) ;
+  for i := 0 to FAdrsList.Count - 1 do
+    ( FAdrsList.Items[i] as TVisited ).Iterate( pVisitor ) ;
+  for i := 0 to FEAdrsList.Count - 1 do
+    ( FEAdrsList.Items[i] as TVisited ).Iterate( pVisitor ) ;
+end;</pre>
+<p>This has the desired effect as you can see is the dialog below. All the objects in the hierarchy have been touched by the visitor and have had their &lsquo;flat&rsquo; properties written out for display. In the early versions of the framework this is how I iterated over complex hierarchies, but it was very error prone as it was easy to add another contained class to a parent object and to forget to make the necessary changes to the iterate method.</p>
+<p> <img width="492" height="272" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image001_0010.gif"> </p>
+<p>We shall now use RTTI to detect all the owned (and published) instances of list properties and iterate over those in the abstract visitor class. This makes the abstract visitor&rsquo;s Iterate rather more complex, but means we don&rsquo;t have to remember to override a concreate classes&rsquo; iterate method each time we add an owned list.</p>
+<h2>Generically detecting and iterating over an owned TList</h2>
+<p>If we take another look at the method tiGetPropertyNames we see that the third parameter is an array (or set) of property types. You will recall that in TypInfo.pas, one of the possible values a property type kind can take is tkClass. So, we will use tiGetPropertyNames and pass tkClass as a parameter so a list of class type property names are returned. We shall then iterate through the list of property names and if the class property is a TList descendent, then scan the list elements and call Iterate on each one. This way we are one step closer to automating the iteration process. The implementation of TVisited.Iterate is shown below:</p>
+<pre>
+procedure TVisited.Iterate(pVisitor: TVisitor);
+var
+  lClassPropNames : TStringList ;
+  i : integer ;
+  j : integer ;
+  lVisited : TObject ;
+  lList : TList ;
+begin
+  pVisitor.Execute( self ) ;
+  // Create a string list to hold the property names
+  lClassPropNames := TStringList.Create ;
+  try
+    // Get all property names of type tkClass
+    tiGetPropertyNames( self, lClassPropNames, [tkClass] ) ;
+    // Scan through these properties
+    for i := 0 to lClassPropNames.Count - 1 do 
+    begin
+      // Get a pointer to the property
+      lVisited := GetObjectProp( self, lClassPropNames.Strings[i] ) ;
+      // If the property is a TList, then visit it's items
+      if (lVisited is TList ) then
+      begin
+        lList := TList( lVisited ) ;
+        for j := 0 to lList.Count - 1 do
+          if ( TObject( lList.Items[j] ) is TVisited ) then
+            TVisited( lList.Items[j] ).Iterate( pVisitor ) ;
+      end ;
+    end ;
+  finally
+    lClassPropNames.Free ;
+  end ;
+end;</pre>
+<p>This code give&rsquo;s the desired results of iterating over all the elements contained in published TList(s) in the object hierarchy. We can verify this buy running tiShowPerObjAbs and checking that the output matches the screen shot below:</p>
+<p> <img width="394" height="218" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image002_0002.jpg"> </p>
+<p>Lets quickly walk through the code and see how it works. First pVisitor.Execute( self ) is called to ensure that the current object is passed to the Visitor. Next, we create an empty string list and populate it with the names of any class type published properties on the object we are currently visiting (or self). We now scan this list of class type property names and call GetObjectProp( self, &lt;PropName&gt; ) to get a pointer to the published class property. We check if this object is a TList and if it is, scan it for instances of TVisited. When we find an instance of TVisited in the list, we call TVisited.Iterate( pVisitor ) an pass the Visitor we are currently working with. We repeat this process for each class type published property, and when done clean up by freeing the resources we used along the way.</p>
+<p>Since writing this generic iteration routine the number of iteration related errors in my programming has dropped to almost zero (before developing this approach, I kept making mistakes because I would add another owned list to an object, and forget to override its owner&rsquo;s iterate method. This has had a significant payback in saved developer time.</p>
+<p>Now that we have developed an approach for iterating over a class that owns 0..n TLists, we shall extend the logic to iterate over a class that owns 0..n TPerObjAbs(s).</p>
+<p>Iterating when objects own objects (rather than lists owning objects)</p>
+<p>Why would we want to iterate over a class that owns 0..n TPerObjAbs? Take a look at how we modelled a person as a TPerson:</p>
+<pre>
+TPerson = class( TPerObjAbs )
+published
+  property Name : string read FName write FName ;
+  property EAdrsList : TList read GetEAdrsList ;
+  property AdrsList : TList read GetAdrsList ;
+end ;</pre>
+<p>and lets say we want to extend our class hierarchy with a company class represented like this:</p>
+<pre>
+TCompany = class( TPerObjAbs )
+published
+  property CompanyName : string read FName write FName ;
+  property EAdrsList : TList read GetEAdrsList ;
+  property AdrsList : TList read GetAdrsList ;
+end ;</pre>
+<p>And we want to add some code to search for, say, a person&rsquo;s or companies E-mail address from EAdrsList. One way would be to add a FindEMailAddress : TEAdrs method to both the TPeople and TCompany classes, but this would mean duplication of code. Another approach would be to descend both TPerson and TCompany from the same parent, but this may not be possible for a variety of reasons. Another solution to this problem is to use object containment. We can create custom TList descendent (or in our case, TPerObjList descendent) and add the special FindEMailAddress code there. That way, wherever we use an instance of TEAdrs, we have access to the FindEMailAdrs method. This is easy to do and I&rsquo;m sure you have used this technique before, the only complication is how to automatically iterate over this modified object hierarchy. Lets say we refactor the class hierarchy as shown in the code snip below:</p>
+<pre>
+TEAdrsList = class( TPerObjList ) ;
+TEAdrs = class( TPerObjAbs )
+published
+  property AdrsType : string read FAdrsType write FAdrsType ;
+  property Text : string read FText write FText ;
+end ;
+
+TAdrsList = class( TPerObjList ) ;
+TAdrs = class( TPerObjAbs )
+published
+  property AdrsType : string read FAdrsType write FAdrsType ;
+  property Lines : string read FLines write FLines ;
+  property Suburb : string read FSuburb write FSuburb ;
+  property Country : string read FCountry write FCountry ;
+end ;
+
+TPerson = class( TPerObjAbs )
+published
+  property Name : string read FName write FName ;
+  property EAdrsList : TEAdrsList read FEAdrsList ;
+  property AdrsList : TAdrsList read FAdrsList ;
+end ;</pre>
+<p>We have introduced a list object for both TAdrs and TEAdrs. This will give us fine grain control over the list management which we did not have by using a TObjectList as the container. The TPerson class now has an instance of TAdrsList and TEAdrsList, instead of two instances of TObjectList. As expected, when we call tiShowPerObjAbs passing an instance of TPeople, we get the following result:</p>
+<p> <img width="160" height="142" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image002_0003.jpg"> </p>
+<p>Which is what we expect, but not what we want because Iterate is not detecting the instances of TAdrsList and TEAdrsList, owned by TPerson. We must extend TVisited.Iterate to detect published properties of types other than TList. The new implementation of Iterate is shown below:</p>
+<pre>
+procedure TVisited.Iterate(pVisitor: TVisitor);
+  // Take a TList and a TVisitor, and call TVisited( Items[i] ).Iterate
+  // on each element of the TList.
+  procedure _VisitListElements( lVisited : TObject ; pVisitor : TVisitor ) ;
+  var
+    i : integer ;
+    lList : TList ;
+  begin
+    lList := TList( lVisited ) ;
+    for i := 0 to lList.Count - 1 do
+      if ( TObject( lList.Items[i] ) is TVisited ) then
+        TVisited( lList.Items[i] ).Iterate( pVisitor ) ;
+  end ;
+var
+  lClassPropNames : TStringList ;
+  i : integer ;
+  lVisited : TObject ;
+  lList : TList ;
+begin
+  pVisitor.Execute( self ) ;
+  // Create a string list to hold the property names
+  lClassPropNames := TStringList.Create ;
+  try
+    // Get all property names of type tkClass
+    tiGetPropertyNames( self, lClassPropNames, [tkClass] ) ;
+    // Scan through these properties
+    for i := 0 to lClassPropNames.Count - 1 do 
+	begin
+      // Get a pointer to the property
+      lVisited := GetObjectProp( self, lClassPropNames.Strings[i] ) ;
+      // If the property is a TList, then visit it's items
+      if (lVisited is TList ) then
+        _VisitListElements( lVisited, pVisitor ) 
+      // If the property is a TVisited, then call iterate( pVisitor )
+      else if ( lVisited is TVisited ) then
+        TVisited( lVisited ).Iterate( pVisitor ) ;
+    end ;
+  finally
+    lClassPropNames.Free ;
+  end ;
+end;</pre>
+<p>We have made two significant changes to the implementation of Iterate we wrote to automatically detect owned lists: We have moved the list iteration code into a procedure that is private to Iterate, and we have added code to detect owned instances of TVisited. The changes to the object property scanning code look like this:</p>
+<pre>
+if (lVisited is TList ) then
+  _VisitListElements( lVisited, pVisitor ) 
+  // If the property is a TVisited, then call iterate( pVisitor )
+else if ( lVisited is TVisited ) then
+  TVisited( lVisited ).Iterate( pVisitor ) ;</pre>
+<p>If a class type property is a TList, then _VisListElements is called passing the TList and the TVisitor as parameters. This procedure simply iterates over each element of the list and was added to make the code more readable. If the class type property is a TVisited, then its iterate method is called. This flow of events is shown in the activity diagram below:</p>
+<p> <img width="388" height="465" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image001_0011.gif"> \ </p>
+<p> The refactored Iterate method is now producing the expected and desired result:</p>
+<p> <img width="393" height="238" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image002_0004.jpg"> </p>
+<p>Notice the slight variation from the version of our application where the TPerson class directly owned two TList(s) rather than two TPerObjList(s): The class name of the list class is being written out which is because the list is having Execute( Self ) called within its iterate method. </p>
+<p>This technique uses a recursive call to the Iterate method and will drill down into a class hierarchy to any depth limited only by the system resources and compiler settings.</p>
+<p>Now that we have seen how to use RTTI and recursion to iterate over a composite of objects, we shall extend the abstract base classes with some additional methods like Clone and Assign. These will be used for making duplicate copies of objects so we can edit an object in a buffer. This is necessary if we want to provide an undo option in edit dialogs.</p>
+<h2>The need for the clone and assign methods</h2>
+<p>Sometimes we want to copy all the data from one object to another, or make an exact copy of an object so we can implement buffered editing. An example of this is if we want to write a generic pop up dialog box with both &lt;Cancel&gt; and &lt;Save&gt;. There are several ways to achieve this and the one we use in the tiOPF is to clone the object to be edited to a temporary buffer, then edit the buffered object. If the user clicks Save, the data from the buffered object is copied to the real one. If the user clicks Cancel, then the buffered object is simply thrown away. We shall see an example of this in chapter #5, &lsquo;A worked example of using the tiOPF&rsquo;. But before we can look at the worked example, we must see how to create a duplicate copy of an object with the Clone method, and to copy the data from one object to another with the Assign method. We will start by implementing a hard coded assign method, then look at making this method generic so we do not have to implement Assign in every class we write. Next we shall look at writing a Clone method which will return a duplicate copy of an object, then finally look at the issues surrounding calling Assign on an object that owns other objects.</p>
+<h2>Implementing a hard coded assign method</h2>
+<p>A hard coded assign method is quite easy to implement, but first, we will build a test stub so we can evaluate our progress. We shall start by assigning the data from one instance of a TAdrs to another, and testing it using the code below:</p>
+<pre>
+procedure TFormMain_VisitorManager.btnTestAssign(Sender: TObject);
+var
+  lAdrsFrom : TAdrs ;
+  lAdrsTo : TAdrs ;
+  lsAdrsFrom : string ;
+  lsAdrsTo : string ;
+begin
+  // Create an instance of TAdra to copy from
+  lAdrsFrom := TAdrs.Create ;
+  lAdrsFrom.AdrsType := 'Work-Postal' ;
+  lAdrsFrom.Lines := 'PO Box 429' ;
+  lAdrsFrom.Suburb := 'Abbotsford' ;
+  lAdrsFrom.Country := 'Australia' ;
+  // Create another instance of TAdrs for copying to
+  lAdrsTo := TAdrs.Create ;
+  // Perform the Assign
+  lAdrsTo.Assign( lAdrsFrom ) ;
+  // Output the From and To TAdrs(s) to a string
+  lsAdrsFrom := tiPerObjAbsAsString( lAdrsFrom ) ;
+  lsAdrsTo := tiPerObjAbsAsString( lAdrsTo ) ;
+  // Compare lsAdrsTo with lsAdrsFrom and report on the findings
+  if lsAdrsTo = lsAdrsFrom then
+    ShowMessage( 'Assign worked' )
+  else
+    ShowMessage( 'Assign failed' + #13 +
+    '|' + lsAdrsFrom + '|' + #13 + #13 +
+    '|' + lsAdrsTo + '|' ) ;
+end;</pre>
+<p>In this test stub, we create an instance of a TAdrs, then populate it with some dummy values. We create another instance of TAdrs then call lAdrsTo.Assign( lAdrsFrom ). We convert the results of both lAdrsFrom and lAdrsTo into a string then compare the results and report on any differences. The code we have implemented in TAdrs.Assign looks like this:</p>
+<pre>
+procedure TAdrs.Assign(Source: TPersistent);
+begin
+  AdrsType := TAdrs( Source ).AdrsType;
+  Lines := TAdrs( Source ).Lines;
+  Suburb := TAdrs( Source ).Suburb;
+  Country := TAdrs( Source ).Country;
+end;</pre>
+<p>There are several things I don't like about this code. Firstly, we have to remember to copy each property of TAdrs which means our code is that little harder to maintain and slightly more error prone that if the process was automatic. We have seen how to use RTTI to scan through all the published properties, so this would be a good way of implementing a generic assign. The second problem with the code is that the Assign method is introduced in the class TPersistent and assumes we want to assign from a TPersistent to another TPersistent. We really want to assign from a TPerObjAbs to another TPerObjAbs. We must override Assign and change its signature (or parameters) as part of the changes we will be making. This leads us to writing a generic Assign method for the TPerObjAbs class.</p>
+<h2>Implementing a generic Assign method</h2>
+<p>We have seen how to use tiGetPropertyNames to populate a string list with a classes&rsquo; published property names. We can then scan through this list and use the GetPropValue and SetPropValue methods that are found in Delphi 5's TypInfo.pas unit. The code to implement the automated Assign method is shown below:</p>
+<pre>
+procedure TPerObjAbs.Assign(Source: TPersistent);
+var
+  lsl : TStringList ;
+  i : integer ;
+begin
+  // Create a string list to hold the published property names
+  lsl := TStringList.Create ;
+  try
+    // Populate the string list with the published property names
+    tiGetPropertyNames( self, lsl, ctkSimple ) ;
+    // Scan the list of property names
+    for i := 0 to lsl.Count - 1 do
+    // Call the SetPropValue and GetPropValue methods found in
+    // Delphi 5's TypInfo.pas
+    SetPropValue( Self,
+    lsl.Strings[i],
+    GetPropValue( Source, lsl.Strings[i] )) ;
+  finally
+    // Clean up
+    lsl.Free ;
+  end ;
+end;</pre>
+<p>The last change we must make to assign is to change its signature from Assign( Source : TPersistent ) to Assign( Source : TPerObjAbs ). This appears easy enough to do like this:</p>
+<pre>
+TPerObjAbs = class( TVisited )
+public
+  procedure Assign( Source : TPerObjAbs ) ; override ;
+end ;</pre>
+<p>but we get the compile time error:</p>
+<p> <img width="531" height="76" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image001_0012.gif"> </p>
+<p>If we remove the override directive like this:</p>
+<pre>
+TPerObjAbs = class( TVisited )
+public
+  procedure Assign( Source : TPerObjAbs ) ; 
+end ;</pre>
+<p>then we get this compiler warning:</p>
+<p> <img width="531" height="62" alt="" src="4_BuildingAnAbstractBOMWithTheComposite_Images/4_BuildingAnAbstractBOMWithTheComposite_clip_image001_0013.gif"> </p>
+<p>The solution is to use the reintroduce directive like this:</p>
+<pre>
+TPerObjAbs = class( TVisited )
+public
+  procedure Assign( Source : TPerObjAbs ) ; reintroduce ;
+end ;</pre>
+<p>Re-declaring a method to change its signature by using reintroduce to hide the compiler warning has some side effects. The Delphi help tells this about overriding versus hiding:</p>
+<p>If a method declaration specifies the same method identifier and parameter signature as an inherited method, but doesn&rsquo;t include override, the new declaration merely hides the inherited one without overriding it. Both methods exist in the descendant class, where the method name is statically bound. For example:</p>
+<pre>
+type
+  T1 = class(TObject)
+    procedure Act; virtual;
+  end;
+  T2 = class(T1)
+    procedure Act; // Act is redeclared, but not overridden
+ end;
+ 
+var
+  SomeObject: T1;
+begin
+  SomeObject := T2.Create;
+  SomeObject.Act; // calls T1.Act
+end;</pre>
+<p>So we can safely do this:</p>
+<pre>
+type
+  TPerObjAbs = class( TVisited )
+  public
+    procedure Assign( Source : TPerObjAbs ) ; reintroduce ;
+  end ;
+
+TMyClass = class( TPerObjAbs ) ;
+var
+  lObj1 : TPerObjAbs ;
+  lObj2 : TPerObjAbs ;
+begin
+  lObj1 := TMyClass.Create ;
+  lObj2 := TMyClass.Create ;
+  lObj1.Assign( lObj2 ) ; // This will call Assign on TPerObjAbs as expected
+end ;</pre>
+<p>which is exactly what we do in the framework.</p>
+<p>Early on, I was seduced by the idea of redeclaring Clone and Assign in the concrete classes so I did not have to type cast them when I was using these classes in applications. My mistake was to do this:</p>
+<pre>
+TMyClass = class( TPerObjAbs )
+public
+  procedure Assign( Source : TMyClass ) ; reintroduce ;
+  functinon Clone : TMyClass ; reintroduce ;
+end ;</pre>
+<p>As we will see in the next section, there are times when Assign has to be overriden to implement special behaviour to handle class type properties. In the framework, I have a generic edit dialog that takes an instance of TPerObjAbs as a parameter, makes a clone, lets the user edit the clone, then Assigns the buffer back to the original object. Calling TPerObjAbs.Assign caused the wrong assign to be executed. This was a silly mistake to make but it still took me ages to debug and then understand. So, we can safely change the signature of Assign when subclassing from TPersistent to TVisited to TPerObjAbs, but we cant change the signature of Assign from this level down.</p>
+<h2>Implementing a generic clone method</h2>
+<p>Now that we have introduced a generic Assign method, we can have a shot at writing a generic Clone method that will return a copy of the object being cloned. We shall use the same test stub code for evaluating Clone as we did for Assign, except that the call to Assign:</p>
+<pre>
+// Create another instance of TAdrs for copying to
+lAdrsTo := TAdrs.Create ;
+// Perform the Assign
+lAdrsTo.Assign( lAdrsFrom ) ;</pre>
+<p>will be replaced with a call to clone like this:</p>
+<pre>
+// Create another instance of TAdrs by calling clone
+lAdrsTo := TAdrs( lAdrsFrom.Clone ) ;</pre>
+<p>Notice that we have to type cast the result of Clone to TAdrs in the client code as we can't override Clone in the concrete class. The code that is implemented in Clone looks like this:</p>
+<pre>
+function TPerObjAbs.Clone: TPerObjAbs;
+var
+  lClass : TPerObjAbsClass ;
+begin
+  lClass := TPerObjAbsClass( ClassType ) ;
+  result := TPerObjAbs( lClass.Create );
+  result.Assign( self ) ;
+end;</pre>
+<p>The beauty of this code is that it will generically clone whatever class it is called on. It will also ensure that any code in the concrete classes Create method is called. We can test this code and find that it will work reliably as long as we have correctly implemented Assign on concrete classes that contain object properties.</p>
+<h2>The problem with assigning object type properties</h2>
+<p>Implementing Assign on a class that contains object type properties like TPeople with its properties AdrsList : TAdrsList and EAdrsList : TEAdrsList requires a little more thought. There are times when we will want Assign clone any classes that it owns. This is required for our TPerson class where the TPerson owns the addresses and EAddresses. If the TPerson where associated with another object by a mapping type relationship, rather that an ownership type relationship, we would probably want to copy pointers rather that clone objects. This is summarised below:</p>
+<p>&bull; Clone owned objects: This is useful when one class owns an instance of another, for example the TPerson class owns instances of TAdrsList and TEAdrsList, therefore it is logical to clone these classes when cloning the TPerson class. The implementation of Clone to achieve this is shown below:</p>
+<pre>
+procedure TPerson.Clone(pSource: TPerObjAbs);
+begin
+  FEAdrsList := TPerson( pSource ).EAdrsList.Clone;
+  FAdrsList := TPerson( pSource).AdrsList.Clone;
+end;</pre>
+<p>&bull; Copy pointers: This is done when one class has a reference to another class, for example many classes may have references to the shared class. This may happen when you have a TSex object which can either be Male, Female or Unknown. It is possible that an application would have a single instance of a list of TSex objects that are shared among TPerson instances. This could be implemented like this:</p>
+<pre>
+// We have a list of TSex objects that is shared between instances of TPerson(s)
+TSex = class( TPerObjAbs )
+published
+  property TextShort : string read FTextShort write FTextShort ; // 'M', 'F', etc
+  property TextLong : string read FTextLong write FTextLong ; // 'Male', 'Female'
+end ;</pre>
+<p>Each TPerson has a pointer to one of the shared TSex objects like this:</p>
+<pre>
+TPerson = class( TPerObjAbs )
+public
+  procedure Assign( Source : TPerObjAbs ) ;
+published
+  property Sex : TSex read FSex write FSex ;
+end ;</pre>
+<p>The assign method would be implemented by copying the pointer to the shard TSex object, not by creating a new owned instance of TSex.</p>
+<pre>
+procedure TPerson.Assign( Source : TPerObjAbs ) ;
+begin
+  inherited Assign( Source ) ;
+  FSex := TPerson( Source ).Sex ;
+end ;</pre>
+<p>The challenge is to find an elegant way of implementing these two cases and this is discussed next.</p>
+<h2>How to assign object propety types</h2>
+<p>The properties that a TPerObjAbs descendant can have will fall into one of three categories:</p>
+<p>1. Public properties like OID and ObjectState</p>
+<p>2. Published 'Flat' properties with data types like String, Integer, Real, TDateTime or Boolean. These can be copied from one instance of an object to another by using the generic RTTI Assign method we looked at earlier.</p>
+<p>3. Class type properties that can be cloned or assigned by either copying a pointer to a shared instanced, or by cloning the class property and creating another instance.</p>
+<p>The first step is to refactor the TPerObjAbs class (using the Template Method pattern as a basis) and break Assign up into three steps: AssignPublicProps, AssignPublishedProps and AssignClassProps, with Assign calling the three methods in sequence. This lets us override just the AssignClassProps in any concrete classes that that have object type properties. The new interface of TPerObjAbs is shown below:</p>
+<pre>
+TPerObjAbs = class( TVisited )
+protected
+  procedure AssignPublicProps(pSource: TPerObjAbs);
+  procedure AssignPublishedProps(pSource: TPerObjAbs; pPropFilter: TTypeKinds = [] );
+  // You must override this in the concrete if there are class properties
+  procedure AssignClassProps(pSource: TPerObjAbs); virtual ;
+public
+  procedure Assign( pSource : TPerObjAbs ) ; reintroduce ;
+end ;</pre>
+<p>And the implementation of Assign, inspired by the Template Method pattern is shown next:</p>
+<pre>
+procedure TPerObjAbs.Assign(pSource: TPerObjAbs);
+begin
+  AssignPublicProps( pSource ) ;
+  AssignPublishedProps( pSource ) ;
+  AssignClassProps( pSource ) ;
+  // When you create a concrete class that contains object type properties
+  // you will have to override AssignClassProps( ) and implement
+  // the necessary behaviour to copy pointers or create new instances
+  // of these properties.
+end;</pre>
+<p>First of all, Assign calls AssignPublicProps which is simple to implement by hard coding the mapping of properties to the current object (self) from the one being passed as a parameter (pSource) and this is shown below:</p>
+<pre>
+procedure TPerObjAbs.AssignPublicProps(pSource: TPerObjAbs);
+begin
+  OID := pSource.OID ;
+  ObjectState := pSource.ObjectState ;
+  Owner := pSource.Owner ;
+end;</pre>
+<p>Next, Assign calls AssignPublishedProps, which is a generic routine that copies all 'flat' or 'simple' property types. We developed this code earlier in the section on implementing a generic Assign method.</p>
+<p>Finally, Assign calls AssignClassProps, which contains some code to raise an exception in the abstract class. This will remind the developer of the concrete class that he has forgotten to implement the custom AssignClassProps as required. The implementation of AssignClassProps that can be found in TPerObjAbs looks like this:</p>
+<pre>
+procedure TPerObjAbs.AssignClassProps(pSource: TPerObjAbs);
+begin
+  Assert( CountPropsByType( pSource, [tkClass] ) = 0,
+    'Trying to call ' + ClassName + '.Assign( ) on a class that contains ' +
+    'object type properties. AssignClassProps( ) must be overridden in the &lsquo; +
+    'concrete class.' ) ;
+end;</pre>
+<p>This reminds us that we have to copy pointers, or clone objects in the concrete class like this:</p>
+<pre>
+procedure TPerson.AssignClassProps(pSource: TPerObjAbs);
+begin
+  FEAdrsList.Assign( TPerson( pSource ).EAdrsList ) ;
+  FAdrsList.Assign( TPerson( pSource ).AdrsList ) ;
+end;</pre>
+<p>In TPerson.AssingClassProps, we want to clone the objects, not copy pointers. TPerson creates an owned instance of both TEAdrsList and TAdrsList in its constructor so we do not have to call clone in AssignClassProps. Calling FEAdrsList.Assign( ) has the same effect as calling FEAdrsList := pSource.Clone here, except that it avoids the possibility of a memory leak.</p>
+<p>This ends our discussion on how to assign and clone objects. An example of this in use can be found in the address book application that comes with the tiOPF source code. Next we will look at three helper methods which we use on the TPerObjList and TPerObjAbs to iterate without creating a TVisitor, or to help search for an object with certain properties.</p>
+<h2>Iterating without creating a TVisitor with ForEach( )</h2>
+<p>We have seen how to user a TVisitor descendent to iterate over all the nodes in a hierarchy of objects that is constructed based on GoF&rsquo;s Composite Pattern. This can be very convenient if you know you want to touch all the objects in a hierarchy, but sometimes the programmer knows he only wants to iterate over the objects in a certain list, and is not interested in touching child objects. This is where a ForEach method becomes useful. For example, say we want to extend our business object model so the TPerson class has an Salary property, and the TPeople class knows how to increase the salary by say, 10% for all the people in the list. The modified interface of TPerson and TPeople might look like this:</p>
+<pre>
+TPeople = class( TPerObjList )
+published
+  procedure IncreaseSalary ;
+end ;
+
+TPerson = class( TPerObjAbs )
+private
+  FSalary : real ;
+published
+  property Salary : real read FSalary write FSalary ;
+end ;</pre>
+<p>and the implementation of TPeople.IncreaseSalary looks like this:</p>
+<pre>
+procedure TPeople.IncreaseSalary;
+var
+  i : integer ;
+begin
+  for i := 0 to Count - 1 do
+  TPerson( Items[i] ).Salary := TPerson( Items[i] ).Salary * 1.1 ;
+end;</pre>
+<p>There are two things I don'like about this code:</p>
+<ol>
+  <li>1. We have to manually iterate over the owned objects; and</li>
+  <li>2. We have to type cast each Items[i] call as a TPerson.</li>
+</ol>
+<p>We discussed the problem of having to manually iterate over the elements in a list in chapter #2 &lsquo;The Visitor Framework&rsquo; and went to some lengths to understand how to use the Visitor pattern to generically solve this problem. Along the way though, we looked at passing a method pointer to each element in the collection. We shall revisit this approach here as it is simpler to code than the Visitor when we only want to touch the elements in a single list. The Visitor pattern helps us maintain state information as we move from one object to another and as state information is not important here, the method pointer approach shall be ideal.</p>
+<p>As discussed in chapter #2, we move the for i := 0 to Count logic into a method on the TPerObjList class and have the specialist business logic in one of the concrete classes. The TPerObjList.ForEach method is shown below:</p>
+<pre>
+procedure TPerObjList.ForEach(pMethod: TPerObjAbsMethod);
+var
+  i : integer ;
+begin
+  for i := 0 to Count - 1 do
+    pMethod( Items[i] ) ;
+end;</pre>
+<p>and the modified TPeople class with its two procedures IncreaseSalay, which is public and can be called by a client application, and DoIncreaseSalary which is private and gets called by IncreaseSalary.</p>
+<pre>
+TPeople = class( TPerObjList )
+private
+  procedure DoIncreaseSalary( pData : TPerObjAbs ) ;
+published
+  procedure IncreaseSalary ;
+end ;</pre>
+<p>DoIncreaseSalary contains the code to perform the calculation:/p>
+<pre>
+procedure TPeople.DoIncreaseSalary(pData: TPerObjAbs);
+begin
+  TPerson( pData ).Salary := TPerson( pData ).Salary * 1.1 ;
+end;</pre>
+<p>And IncreaseSalary contains a call to ForEach with DoIncreaseSalary being passed as a parameter.</p>
+<pre>
+procedure TPeople.IncreaseSalary;
+begin
+  ForEach( DoIncreaseSalary ) ;
+end;</pre>
+<p>This might look like an unnecessarily complex way of achieving something that can be done with a For i := 0 to Count - 1 loop, and for this example it probably is. The ForEach method becomes really useful when you want perform more complex logic on significantly more complex object models of nested objects.</p>
+<p>The other problem this example highlighted is the need to typecast each call to Items[I] to a TPerson before we could access any methods that are found in TPerson but not in TPerObjAbs.</p>
+<p>Type casting Items[i] in the concrete class</p>
+<p>Suppose we want to calculate the average salary of all the TPerson(s) in the TPeople. We could use the ForEach method, although this is not ideal because to calculate an average, we will have to keep a running total and there is no provision for maintaining state in the ForEach method. We write a TVisitor descendent, but we are only wanting to scan a simple list, so perhaps coding a for i :=- 0 to Count &ndash; 1 loop would be quicker. An example of this is shown below:</p>
+<pre>
+function TPeople.AverageSalary: real;
+var
+  i : integer ;
+  lSum : real ;
+begin
+  lSum := 0 ;
+  for i := 0 to Count - 1 do
+    lSum := lSum := TPerson( Items[i] ).Salary ;
+  result := lSum / Count ;
+end;</pre>
+<p>We want to remove the need to typecast the Items property every time we reference an instance of TPerson. While we are about it, we will change the TPerObjList.Add method to perform some compile time checking so it will only allow us to add TPerson(s) or their descendents to the list. The interface section of the modified TPeople class is shown below:</p>
+<pre>
+TPeople = class( TPerObjList )
+private
+  function GetAverageSalary : real ;
+protected
+  function GetItems(i: integer): TPerson ; reintroduce ;
+  procedure SetItems(i: integer; const Value: TPerson); reintroduce ;
+public
+  property Items[i:integer] : TPerson read GetItems write SetItems ;
+  procedure Add( pObject : TPerson ) ; reintroduce ;
+published
+  property AverageSalary : real read GetAverageSalary ;
+end ;</pre>
+<p>GetItems, SetItems and Add just contain inherited calls to the same methods in the abstract class. Remember the side effects of using method hiding with reintroduce to suppress the compiler warnings. If the GetItems, SetItems and Add method never have any changes to their implementation, this is quite safe. If you add extra code to any of these methods in the concrete classes, you will find the behavior unreliable.</p>
+<p>This idea of typecasting the Items property and Add method was suggested by one of the early users of the tiOPF, Ian Krigsman and is a technique I use everywhere I have a tightly coupled collection &ndash; class relationship. The technique also allows Delphi&rsquo;s Code Insight feature to work in the IDE which makes life so much easier, especially when you are working with a complex class hierarchy.</p>
+<p>Now that we have looked at how to typecast the Items[i] property to return the correct type from the collection, and seen how to use ForEach as a quicker way to code simple iteration, we shall look at how to code a generic find visitor.</p>
+<p>Adding some helper methods<br>
+  Searching a tree with Find</p>
+<p>Sometimes there is a need to scan the entire class hierarchy looking for a single instance of an object. I use this technique frequently when I have a family of classes that are mapped to each other (rather than a containment relationship where one class owns another). Reading this type of data typically involves two calls to the database: First to read all the mapped to classes that might be required if you have an application with some lookup list data, and the lookup list items are stored in memory as objects. The second call to the database would typically read a list of OIDs for the lookup list items and we would have to search the lookup list hierarchy for the matching item. This can be simplified with a generic find method that searches for an object by OID.</p>
+<p>As usual, we will start by writing a small test stub which is shown below. We have added a TSpinEdit to the main form and use this to enter an OID to search for. We call FPeople.Find( seOID.Value ) and if an object exists in the FPeople hierarchy with a matching OID, then a pointer to this object is returned. If a value is found, we show it with tiShowPerObjAbs.</p>
+<pre>
+procedure TFormMain_VisitorManager.btnFindClick(Sender: TObject);
+var
+  lData : TPerObjAbs ;
+begin
+  // seOID is a TSpinEdit where we can enter the OID of the
+  // object we are looking for
+  lData := FPeople.Find( seOID.Value ) ;
+  // if found, then show
+  if lData &lt;&gt; nil then
+    tiShowPerObjAbs( lData ) ;
+end;</pre>
+<p>FPeople.Find creates an instance of TVisPerObjFindByOID and assigns its OIDToFind property. The Iterate method is then called and the Visitor ripples over each node in the tree. If a matching OID is found then, the visitor breaks out of the loop and the result is returned. The implementation of TPerObjAbs.Find is shown below:</p>
+<pre>
+function TPerObjAbs.Find(pOID: TOID): TPerObjAbs;
+var
+  lVis : TVisPerObjFindByOID ;
+begin
+  // Create an instance of TVisPerObjFindByOID
+  lVis := TVisPerObjFindByOID.Create ;
+  try
+    // Set its OIDToFind property
+    lVis.OIDToFind := pOID ;
+    // Call Iterate
+    self.Iterate( lVis ) ;
+    // Return the found object if one exists
+    result := lVis.Found ;
+  finally
+    // Clean up
+    lVis.Free ;
+  end ;
+end;</pre>
+<p>The interface of TVisPerObjFindByOID is as you would expect and follows the standard TVisitor subclass interface with AcceptVisitor and Execute being overridden. There are two additional properties OIDToFind and Found, which is where a pointer to the located object can be returned to the calling client. The interface of TVisPerObjFindByOID is shown below:</p>
+<pre>
+TVisPerObjFindByOID = class( TVisitor )
+private
+  FiOIDToFind: TOID;
+  FFound: TPerObjAbs;
+protected
+  function AcceptVisitor : boolean ; override ;
+public
+  procedure Execute( pVisited : TVisited ) ; override ;
+  property Found : TPerObjAbs read FFound ;
+  property OIDToFind : TOID read FiOIDToFind write FiOIDToFind ;
+end ;</pre>
+<p>TVisPerObjFindByOID.AcceptVisitor perform a type check on Visited to ensure it is an instance of TPerObjAbs (because if it is not, it probably won&rsquo;t have an OID property). AcceptVisitor also checks that Found = nil so the visitor will break out of the iteration loop once the first object with a matching OID is found. The implementation of TVisPerObjFindByOID.AcceptVisitor is shown below:</p>
+<pre>
+function TVisPerObjFindByOID.AcceptVisitor: boolean;
+begin
+  result := ( Visited is TPerObjAbs ) and
+    ( FFound = nil ) ;
+end;</pre>
+<p>TVisPerObjFindByOID.Execute performs the usual call to AcceptVisitor and breaks out if false is returned. The OID of the object being visited is compared to the value we are searching for and if they match, FFound is set to point to the found object. FFound &lt;&gt; nil is used in AcceptVisitor as the means of breaking out of the iteration loop. The implementation of TVisPerObjFindByOID.Execute is shown below.</p>
+<pre>
+procedure TVisPerObjFindByOID.Execute(pVisited: TVisited);
+begin
+  inherited Execute( pVisited ) ;
+  if not AcceptVisitor then
+    Exit ; //==&gt;
+  // Check for a matching OID
+  if TPerObjAbs( Visited ).OID = FiOIDToFind then
+    FFound := TPerObjAbs( Visited ) ;
+end;</pre>
+<p>This technique for finding a single object in a hierarchy is useful for searching for objects by OID as long as each OID is unique throughout the entire database. If for example a generator or auto incrementing field has been used to create database primary key fields and there is a chance that OIDs are not unique across the database, then this technique will fail. (OIDs can be unique within a table, but not unique across the database and it&rsquo;s this that will cause unreliable results when TVisPerObjFindByOID is used.</p>
+<h2>Searching a tree with FindByProperty</h2>
+<p>The final aim of this section is to create a generic search routine that will scan a Composite hierarchy looking for a single object (or list of objects) by published property value. This can be achieved with the same technique we used earlier &ndash; by writing a search Visitor and using RTTI to compare the property values. We start by writing a test stub. In this example, cbProperty is a drop down combo box with a list of available property names and eValue is a TEdit where the search for value can be entered. We call FPeople.FindByProperty passing the property name and value we are searching for. If found, a pointer to the matching object is returned and if not found, nil is returned. This code is shown below:</p>
+<pre>
+procedure TFormMain_VisitorManager.btnFindByPropClick(Sender: TObject);
+var
+  lData : TPerObjAbs ;
+begin
+  // Call FindByProperty, passing a property name and a value
+  lData := FPeople.FindByProperty( eProperty.Text, eValue.Text ) ;
+  // if found, then show
+  if lData &lt;&gt; nil then
+    tiShowPerObjAbs( lData ) ;
+end;</pre>
+<p>Next, we can write the TPerObjAbs.FindByProperty method where a TVisPerObjFindByProperty visitor is created and the search values are set. The Visitor is passed to the object at the top of the tree where the search will be started and the result of a successful find is passed back as the result of the function. This code is shown below:</p>
+<pre>
+function TPerObjAbs.FindByProperty(
+   pFindProp : string ;
+   pFindVal : variant ): TPerObjAbs;
+var
+  lVis : TVisPerObjFindByProperty ;
+begin
+  lVis := TVisPerObjFindByProperty.Create ;
+  try
+    lVis.FindProp := pFindProp ;
+    lVis.FindVal := pFindVal ;
+    self.Iterate( lVis ) ;
+    result := lVis.Found ;
+  finally
+    lVis.Free ;
+  end ;
+end;</pre>
+<p>Finally, we write the TVisPerObjFindByProperty visitor that has the usual overridden methods &ndash; AcceptVisitor and Execute. Execute uses the two RTTI methods IsPublishedProp and GetPropValue (found in TypInfo.pas) to check if a property of the required name exists on the object being visited, and if it does, to check its value. A successful find sets the FFound property and breaks the visitor out of its iteration loop. The interface of TVisPerObjFindByProperty is shown below:</p>
+<pre>
+TVisPerObjFindByProperty = class( TVisitor )
+private
+  FFound: TPerObjAbs;
+  FFindProp: String;
+  FFindVal: Variant;
+protected
+  function AcceptVisitor : boolean ; override ;
+public
+  procedure Execute( pVisited : TVisited ) ; override ;
+  property Found : TPerObjAbs read FFound ;
+  property FindProp : String read FFindProp write FFindProp ;
+  property FindVal : Variant read FFindVal write FFindVal ;
+end;</pre>
+<p>And the implementation of AcceptVisitor and Execute are shown here:</p>
+<pre>
+function TVisPerObjFindByProperty.AcceptVisitor: boolean;
+begin
+  result := ( Visited is TPerObjAbs ) and
+    ( FFound = nil ) ;
+end;
+
+procedure TVisPerObjFindByProperty.Execute(pVisited: TVisited);
+begin
+  inherited Execute( pVisited ) ;
+  if not AcceptVisitor then
+    Exit ; //==&gt;
+  if ( IsPublishedProp( Visited, FindProp )) and
+   ( GetPropValue( Visited, FindProp ) = FindVal ) then
+   FFound := TPerObjAbs( Visited ) ;
+end;</pre>
+<p>FindByProperty is a useful function for finding a single object by matching a single property value. A more useful approach would be to return a list of objects and would cater for checking for checking for matches on multiple properties at the same time. Different match criteria like =, &lt;&gt;, &gt;= or LIKE would be useful as well as the ability to chain operations together with AND, OR or NOT. This is implemented in the tiOPF in the unit tiListView.pas where a generic filter dialog is attached to the tiListViewsPlus class.</p>
+<h2>Summary</h2>
+<p>This chapter has covered the core requirements of an abstract business object model including the need for a generic list class and an abstract business object class. We started by basing the framework on GoF&rsquo;s Composite pattern then enforced a type-safe relationship between the collection and the objects it contains. We looked at how to make the TVisited.Iterate method generic so it would detect owned objects, and owned lists of objects and iterate over these as well without the need to special code. We looked at a generic way of writing Clone and Assign methods, then developed a useful Find and FindByProperty Visitors. These are the core principles used in the framework and they are built on in the code you can download which provides many more useful functions and procedures. There is still plenty of room for improvement of the abstract BOM with a more generic search routine being towards the top of the list.</p>
+<h2>The next Section </h2>
+<p>In the next chapter, we shall use the Visitor framework we have developed, along with the abstract business object model based on the Composite Pattern to build a working contact management application. <a href="5_AWorkedExampleOfUsingTheTIOPF.shtml">The next section can be read here.</a></p>
+
+<!--#include virtual="/Shared/Footer.html"-->
+
+</body>
+</html>

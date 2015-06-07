@@ -1,0 +1,94 @@
+/* removing the list styles and indentation */
+.menu ul {
+	padding: 0;
+	margin: 0;
+	list-style: none;
+}
+
+/* Make first-level list into a horizontal bar */
+.menu li {
+	float: left; 
+	 position: relative;
+/*  width: 10em; */
+}
+
+/* Now we tackle the 2nd level lists */
+.menu li ul {
+	display: none;
+	position: absolute; 
+	top: 100%;
+	left: 0;
+}
+
+/* reset the top left on all IE browsers */
+.menu li > ul {
+	top: auto;
+	left: auto;
+	}
+
+
+/* now display the 2nd level items on a roll-over */
+.menu li:hover ul, li.over ul {
+	display: block; 
+}
+
+/* Holly Hack for IE \*/
+* html .menu ul li { float: left; height: 1%; }
+* html .menu ul li a { height: 1%; }
+/* End */
+
+
+
+/* ------------------------------- */
+/*  Now lets make the menus pretty */
+/* ------------------------------- */
+
+.menu a {
+	font-weight: bold;
+	color: white;
+	text-decoration: none;
+	background: black;
+}
+
+
+.menu li li a {
+	display: block;
+	font-weight: normal;
+	color: white;
+	padding: 0.2em 10px;
+}
+
+.menu ul li a:hover {
+	background-color: white;
+	color: black;
+	border: 1px solid black;
+}
+
+.menu hr {
+	display: none;
+}
+
+.menu ul li a {
+	display: block;
+	width: 110px;
+	padding: 1px 8px;
+	border: 1px solid black;
+ 
+  /* slight divider between multi-line menu items. */
+  border-bottom-style: dotted ; 
+  border-bottom-color: gray; 
+  border-bottom-width: 1px;
+}
+
+
+/* centre all menu items */
+.menu li {
+	text-align: center;
+}
+
+/* spacing between menu and other content in page */
+.menu {
+	margin-top:      5px;
+	margin-bottom:   15px;
+}
+

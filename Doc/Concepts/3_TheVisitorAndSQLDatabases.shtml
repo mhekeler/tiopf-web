@@ -1,0 +1,1259 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>tiOPF Documentation - The Visitor pattern and SQL databases</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>3. The Visitor Pattern and SQL Databases </h1> 
+<h1>The aims of this chapter</h1>
+<p>In the previous chapter we investigated how the Visitor pattern can be used to perform a family of related tasks on some elements in a list in a generic way. We used the framework to create a small application that saves names and email addresses to either a comma separated value (CSV) file or fixed length text (TXT) file.</p>
+<p>This is useful, but most business applications use a relational database to save their data, so in this chapter we will extend the framework to store our objects in an Interbase database.</p>
+<h2>Prerequisites</h2>
+<p>It would be best to have read &lsquo;Chapter #2: Implement the Visitor Framework&rsquo; first because the concepts introduced in this chapter are building on the ideas discussed in Chapter #2</p>
+<h2>The business problem we will work with as an example</h2>
+<p>We will continue with out simplified version of the contact management system introduced in the previous chapter. We shall save a simple list of TPeople objects, with two properties Name and EMailAdrs. The class diagram of our business objects looks like this:</p>
+<p> <img width="275" height="89" alt="UML People Class" src="3_TheVisitorAndSQLDatabases_Images/3_TheVisitorAndSQLDatabases_clip_image001.gif"> </p>
+<h2>Implementation</h2>
+<h2>Creating the database</h2>
+<p>Before we can begin, we will need a database to work with. The following SQL script will create an Interbase database with a single table called People. The table shall have two columns Name and EMailAdrs. This script is called SQLVisitor_Intebase_DDL.sql and can be found in the directory with the source code. (Details for downloading the source code are at the end of the chapter.) Note the Create Database and Connect commands have hard coded database name, user name and password. If you have unzipped the source into another directory, or have changed Interbase&rsquo;s administrator password, you will have to edit the script.</p>
+<pre>
+Create Database &quot;C:\TechInsite\OPFPresentation\Source\3_SQLVisitors\Test.gdb&quot;
+  user &quot;SYSDBA&quot; password &quot;masterkey&quot; 
+connect &quot;C:\TechInsite\OPFPresentation\Source\3_SQLVisitors\Test.gdb&quot;
+  user &quot;SYSDBA&quot; password &quot;masterkey&quot; ;
+
+drop table People ;
+
+create table People
+   ( OID Integer not null,
+   Name VarChar( 20 ),
+   EMailAdrs VarChar( 60 ),
+   Primary Key ( OID )) 
+
+create unique index People_uk on People ( name ) ;
+
+insert into People values ( 1, &quot;Peter Hinrichsen&quot;, &quot;peter_hinrichsen@dontspamme.com&quot;);
+insert into People values ( 2, &quot;Don Macrae&quot;, &quot;don@dontspamme.com&quot; ) ;
+insert into People values ( 3, &quot;Malcolm Groves&quot;, &quot;malcolm@dontspamme.com&quot; ) ;
+
+commit ;</pre>
+<h2>Creating a database connection</h2>
+<p>We are going to perform this demonstration using the Interbase Express (IBX) components that come with Delphi. Now, I have been using Interbase for a while now, but have abstracted the database connection code deep into the hierarchy so very seldom have to create a TIBDatabase or TIBQuery manually in code. There are some tricks in wiring these components up with a TIBTransaction that I forget so we will use Delphi&rsquo;s IDE to help walk us through the process. We will create a form and add the components in Delphi&rsquo;s form editor then copy them to the clipboard and paste the code that Delphi generates into a PAS file.</p>
+<p>I have dropped a TIBDatabase, TIBQuery, TIBTransaction (that&rsquo;s the one I forget), TDataSource and TDBGrid on a form, wired them up and set the active property to true. We can connect to the database as expected so I will copy the data access controls to the clipboard and paste them into the pas file where we will be creating our SQL visitor. The form to test the data access components is shown below:</p>
+<p> <img width="495" height="151" alt="UML Visitors" src="3_TheVisitorAndSQLDatabases_Images/3_TheVisitorAndSQLDatabases_clip_image002.jpg"> </p>
+<p>If we copy the components at design time onto the clipboard, and paste them into the pas file, we get some text that looks like this:<br>
+</p>
+<pre>
+object IBDatabase1: TIBDatabase
+  Connected = True
+  DatabaseName = 'C:\TechInsite\OPFPresentation\Source\3_SQLVisitors\Test.gdb'
+  Params.Strings = (
+    'user_name=SYSDBA'
+    'password=masterkey')
+  LoginPrompt = False
+  DefaultTransaction = IBTransaction1
+  IdleTimer = 0
+  SQLDialect = 1
+  TraceFlags = []
+  Left = 8
+  Top = 16
+end
+object IBTransaction1: TIBTransaction
+  Active = True
+  DefaultDatabase = IBDatabase1
+  Left = 8
+  Top = 48
+end
+object IBQuery1: TIBQuery
+  Database = IBDatabase1
+  Transaction = IBTransaction1
+  Active = True
+  CachedUpdates = False
+  SQL.Strings = (
+    'select * from people')
+  Left = 8
+  Top = 80
+end
+ </pre>
+<p>This is actually the way Delphi stores the components in the form&rsquo;s DFM file. This technique of combining Delphi&rsquo;s IDE with coding components by hand was shown to me by Mark Miller in a presentation he made at BorCon 1999 &ndash; a very useful technique.</p>
+<p>It only takes a couple of minutes work to edit this code from the DFM format into Pascal source. The finished result looks like this:<br>
+</p>
+<pre>
+var
+  FDB : TIBDatabase ;
+  FTransaction : TIBTransaction ;
+  FQuery : TIBQuery ;
+  lData : TPerson ;
+begin
+  FDB := TIBDatabase.Create( nil ) ;
+  FDB.DatabaseName := 'C:\TechInsite\OPFPresentation\Source\3_SQLVisitors\Test.gdb' ;
+  FDB.Params.Add( 'user_name=SYSDBA' ) ;
+  FDB.Params.Add( 'password=masterkey' ) ;
+  FDB.LoginPrompt := False ;
+  FDB.Connected := True ;
+  FTransaction := TIBTransaction.Create( nil ) ;
+  FTransaction.DefaultDatabase := FDB ;
+  FDB.DefaultTransaction := FTransaction ;
+  FQuery := TIBQuery.Create( nil ) ;
+  FQuery.Database := FDB ;
+  FQuery.SQL.Text := 'select * from people' ;
+  FQuery.Active := True ;
+end;</pre>
+<h2>Our first SQL database visitor</h2>
+<p>We can wrap this code up as a TVisitor class by implementing the database access in the Visitors Execute method. The Interface of our SQL read Visitor looks like this:<br>
+<pre>
+TVisSQLRead = class( TVisitor )
+protected
+  function AcceptVisitor( pVisited : TVisited ) : boolean ; override ;
+public
+  procedure Execute( pVisited : TVisited ) ; override ;
+end ;</pre>
+<p>We can add some code to scan the query result set, and convert each row to an object and we end up with a big, fat execute method like this:<br>
+</p>
+<pre>
+procedure TVisSQLRead.Execute(pVisited: TVisited);
+var
+  FDB : TIBDatabase ;
+  FTransaction : TIBTransaction ;
+  FQuery : TIBQuery ;
+  lData : TPerson ;
+begin
+  if not AcceptVisitor( pVisited ) then
+    Exit ; //==&gt;
+  FDB := TIBDatabase.Create( nil ) ;
+  FDB.DatabaseName := 'C:\TechInsite\OPFPresentation\Source\3_SQLVisitors\Test.gdb' ;
+  FDB.Params.Add( 'user_name=SYSDBA' ) ;
+  FDB.Params.Add( 'password=masterkey' ) ;
+  FDB.LoginPrompt := False ;
+  FDB.Connected := True ;
+  FTransaction := TIBTransaction.Create( nil ) ;
+  FTransaction.DefaultDatabase := FDB ;
+  FDB.DefaultTransaction := FTransaction ;
+  FQuery := TIBQuery.Create( nil ) ;
+  FQuery.Database := FDB ;
+  FQuery.SQL.Text := 'select * from people' ;
+  FQuery.Active := True ;
+  while not FQuery.EOF do
+  begin
+    lData := TPerson.Create ;
+    lData.Name := FQuery.FieldByName( 'Name' ).AsString ;
+    lData.EMailAdrs := FQuery.FieldByName( 'EMailAdrs' ).AsString ;
+    TPeople( pVisited ).Add( lData ) ;
+    FQuery.Next ;
+  end ;
+  FQuery.Free ;
+  FTransaction.Free ;
+  FDB.Free ;
+end;</pre>
+<p>We can register this Visitor with the Visitor Manager and test it with our experimental application. The result is shown below:
+</p>
+<p> <img width="340" height="183" alt="Visitor Demo screen 01" src="3_TheVisitorAndSQLDatabases_Images/3_TheVisitorAndSQLDatabases_clip_image001_0000.gif"> </p>
+<p>Now that we have got the SQL read Visitor working, we can refactor the code to thin it down, and improve reuse and maintainability.</p>
+<h2>Move the database connection to an abstract Visitor</h2>
+<p>The code that creates and frees the TIBDatabase, TIBTransaction and TIBQuery is crying out to be moved to an abstract class. While we are about it, we shall create another pas file to store our abstract SQL visitors and call it tiPtnVisSQL. The interface of our new abstract Visitor called TVisQryAbs looks like this:</p>
+<pre>
+TVisSQLAbs = class( TVisitor )
+protected
+  FDB : TIBDatabase ;
+  FTransaction : TIBTransaction ;
+  FQuery : TIBQuery ;
+  // Implement AcceptVisitor in the concrete class
+  // function AcceptVisitor( pVisited : TVisited ) : boolean ; override ;
+public
+  constructor Create ; override ;
+  destructor Destroy ; override ;
+  // Implement Execute in the concrete class
+  // procedure Execute( pVisited : TVisited ) ; override ;
+end ; </pre>
+<p>and the constructor and destructors simply contain the code to create and destroy the TIBDatabase, TIBTransaction and TIBQuery as in the previous example. </p>
+<p>This means our concrete visitor (the one that maps the SQL result set to objects) has an Execute method that looks like this:
+</p>
+<pre>
+procedure TVisSQLRead.Execute(pVisited: TVisited);
+var
+  lData : TPerson ;
+begin
+  if not AcceptVisitor( pVisited ) then
+    Exit ; //==&gt;
+  FQuery.SQL.Text := 'select * from people' ;
+  FQuery.Active := True ;
+  while not FQuery.EOF do
+  begin
+    lData := TPerson.Create ;
+    lData.Name := FQuery.FieldByName( 'Name' ).AsString ;
+    lData.EMailAdrs := FQuery.FieldByName( 'EMailAdrs' ).AsString ;
+    TPeople( pVisited ).Add( lData ) ;
+    FQuery.Next ;
+  end ;
+end;</pre>
+<h2>Implementing the Template Method pattern</h2>
+<p>This is starting to look more elegant, however if we have several of these visitors to read different classes from the database, we will be still duplicating lots of code. In the Execute method above, if we where to be reading, say Addresses instead of People, the lines in red and bold would be different, and the lines in blue and italics would be duplicated.
+</p>
+<pre>
+procedure TVisSQLRead.Execute(pVisited: TVisited);
+var
+  lData : TPerson ; // Different
+begin
+  if not AcceptVisitor( pVisited ) then // Duplicated
+    Exit ; // Duplicated
+  FQuery.SQL.Text := 'select * from people' ; // Different
+  FQuery.Active := True ; // Duplicated
+  while not FQuery.EOF do // Duplicated
+  begin // Duplicated
+    lData := TPerson.Create ; // Different
+    lData.Name := FQuery.FieldByName( 'Name' ).AsString ; // Different
+    lData.EMailAdrs := FQuery.FieldByName( 'EMailAdrs' ).AsString ; // Different
+    TPeople( pVisited ).Add( lData ) ; // Different
+    FQuery.Next ; // Duplicated
+  end ; // Duplicated
+end;</pre>
+<p>What we want to do is find a way of reusing the blue italic code, and only having to retype the red bold code. The solution to this is GoF&rsquo;s Template Method pattern.</p>
+<p>GoF tell us that the intent of the Template Method is:</p>
+<p>Define the skeleton of an algorithm in an operation, deferring some steps to client subclasses. Template Method lets subclasses redefine certain steps of an algorithm without changing the algorithm's structure.</p>
+<p>This is exactly what we need here. If we look at the red bold code, we can see that the two blocks of code that must be written for each object-database mapping are FQuery.SQL.Text := bla and the code that maps the rows to the SQL data set to an object list. Lets move these to two procedures and implement them in the concrete class. All the code in blue italic will stay in the abstract class.</p>
+<p>The interface of the re-factored abstract class, TVisSQLAbs class looks like this:
+</p>
+<pre>
+// Interface of the abstract SQL read visitor
+TVisSQLAbs = class( TVisitor )
+protected
+  FDB : TIBDatabase ;
+  FTransaction : TIBTransaction ;
+  FQuery : TIBQuery ;
+  procedure Init ; virtual ; // Implement in the concrete class
+  procedure MapRowToObject ; virtual ; // Implement in the concrete class
+  procedure SetupParams ; virtual ; // Implement in the concrete class
+public
+  constructor Create ; override ;
+  destructor Destroy ; override ;
+  procedure Execute( pVisited : TVisited ) ; override ;
+end ;</pre>
+<p>And the implementation of the Execute method of TVisSQLAbs looks like this:
+</p>
+<pre>
+// Implementation of the abstract SQL read visitor
+procedure TVisSQLAbs.Execute(pVisited: TVisited);
+  begin
+  inherited Execute( pVisited ) ;
+  if not AcceptVisitor then
+    Exit ; //==&gt;
+   
+  Init ; // Implemented in the concrete class
+   
+  SetupParams ; // Implemented in the concrete class
+  FQuery.Active := True ;
+  while not FQuery.EOF do
+  begin
+    MapRowToObject ; // Implemented in the concrete class
+    FQuery.Next ;
+  end ;
+end;</pre>
+<p>The code below shows the interface and implementation of the concrete SQL Visitor TVisSQLReadPeople.</p>
+<p>You can see there are four methods to override and implement:</p>
+<p>1. AcceptVisitor - is the same as in previous examples &ndash; a check to see it the class being visited is of the correct type.<br>
+  2. Init &ndash; is where we set the FQuery.SQL.Text value.<br>
+  3. SetupParams &ndash; we have snuck this method in here and its name says it all. This is where we set any parameters required by the SQL. We can read properties from the object being visited to get the values.<br>
+  4. MapRowToObject &ndash; is where each row of the query result set is turned into an object and added to the list contained in the class being visited.</p>
+<p>The UML of the class hierarchy we have implemented so far looks like this:</p>
+<p> <img width="144" height="243" alt="UML Visitors" src="3_TheVisitorAndSQLDatabases_Images/3_TheVisitorAndSQLDatabases_clip_image001_0001.gif"> </p>
+<h2>Implementing the concrete SQL read visitor</h2>
+<p>Now that we have created an abstract SQL Visitor, we can implement a SQL Visitor to read people. The interface of TVisSQLReadPeople is shown below:
+</p>
+<pre>
+TVisSQLReadPeople = class( TVisSQLAbs )
+protected
+  function AcceptVisitor : boolean ; override ;
+  procedure Init; override ;
+  procedure MapRowToObject ; override ;
+  procedure SetupParams ; override ;
+end ;</pre>
+<p>And TVisSQLReadPeople&rsquo;s implementation is shown here. Note that we have overridden the four methods (AcceptVisitor, Init, MapRowToObject and SetupParams) required by the template we setup in the parent class.<br>
+</p>
+<pre>
+// AccetpVisitor is the same as in previous examples
+function TVisSQLReadPeople.AcceptVisitor : boolean;
+begin
+  result := Visited is TPeople ;
+end;</pre>
+<pre>
+// Init is a new method where we can set the Query.SQL.Text value, or 
+// perform other setup tasks
+procedure TVisSQLReadPeople.Init;
+begin
+  FQuery.SQL.Text := 'select * from people' ;
+  TPeople( Visited ).List.Clear ;
+end;</pre>
+<pre>
+// SetupParams is where we set and parameters on the SQL. The parameter values can 
+// be read from the properties of the object being visited
+procedure TVisSQLReadPeople.SetupParams;
+begin
+  // Do nothing yet, we will implement this in a future example
+end;</pre>
+<pre>
+// MapRowToObject is where the SQL result set rows are turned into objects and is called
+// once for each row returend by the SQL result set.
+procedure TVisSQLReadPeople.MapRowToObject;
+var
+  lData : TPerson ;
+begin
+  lData := TPerson.Create ;
+  lData.Name := FQuery.FieldByName( 'Name' ).AsString ;
+  lData.EMailAdrs := FQuery.FieldByName( 'EMailAdrs' ).AsString ;
+  TPeople( Visited ).Add( lData ) ;
+end;</pre>
+<p>The UML or the class hierarchy we have build so far looks like this:</p>
+<p> <img width="395" height="331" alt="UML Visitors" src="3_TheVisitorAndSQLDatabases_Images/3_TheVisitorAndSQLDatabases_clip_image001_0002.gif"> </p>
+<p>The Visitor is registered with the Visitor Manager as usual, and then executed by passing a call to the visitor manager in the same way as for the text file visitors we build in the previous chapter. This is shown below:</p>
+<pre>
+// Registering TVisSQSLReadPeople is the same as usual
+initialization
+  gVisitorMgr.RegisterVisitor( 'SQLRead', TVisSQLReadPeople ) ;
+end.</pre>
+<pre>
+// And calling TVisSQLReadPeople is the same as usual
+begin
+  gVisitorMgr.Execute( 'SQLRead', FPeople ) ;
+end;</pre>
+<p>We now have the beginnings of a system that will let us read data from one format, and save it to another. For example, the code below will read TPerson(s) from a SQL database, and save them to a CSV file:
+</p>
+<pre>
+// Register the SQLRead Visitor and CSVSave Visitors
+initialization
+  gVisitorMgr.RegisterVisitor( 'CSVSave', TVisCSVSave ) ;
+  gVisitorMgr.RegisterVisitor( 'SQLRead', TVisSQLReadPeople ) ;
+end.</pre>
+<pre>
+// Read from the SQL database, and save to a CSV file is now easy
+var
+  lPeople : TPeople ;
+begin
+  lPeople := TPeople.Create ;
+  try
+    gVisitorMgr.Execute( 'SQLRead', lPeople ) ;
+    gVisitorMgr.Execute( 'CSVSave', lPeople ) ;
+  finally
+    lPeople.Free;
+  end ;
+end ;</pre>
+<p>As you can imagine, it is possible to register any number of Visitors to read and write from different file formats, or database types. In the next section, we will expand the Visitor framework to save objects (as well as read) to a SQL database.</p>
+<h2>Refactor the SQLVisitor hierarchy for read and update (create, update, delete) SQL</h2>
+<p>This is where things become a little trickier. When we where creating our CSV file save visitor, it was easy because we just wrote our all the objects in the list. We can&rsquo;t do this with an SQL database because some of the object may already exist in the database, and attempting to save them again would cause duplicate data and possibly database key violations. We could delete all the records before saving them all back like we do when saving to the CSV file, but writing to a text files is very quick, while interacting with an SQL database can be quite slow. We want to cause as little communication with the database as possible and will write an update Visitor to achieve this goal.</p>
+<p>We will start by writing a Visitor to save changed objects (calling UPDATE SQL), then introduce the concept of an ObjectState property which will let the framework determine whether it has to run CREATE, UPDATE or DELETE SQL.</p>
+<p>The steps we found are necessary when reading objects from a SQL database are:</p>
+<table cellspacing="0" cellpadding="0">
+  <tr class="Normal">
+    <td width="295" valign="top">Task</td>
+    <td width="295" valign="top">Method name</td>
+  </tr>
+  <tr class="Normal">
+    <td width="295" valign="top"><p> Should we be visiting this object? </p></td>
+    <td width="295" valign="top"><p> AcceptVisitor </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="295" valign="top"><p> Setup the Query, assign the SQL </p></td>
+    <td width="295" valign="top"><p> Init </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="295" valign="top"><p> Set any parameters required by the SQL </p></td>
+    <td width="295" valign="top"><p> SetupParams </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="295" valign="top"><p> Turn the SQL result set into objects </p></td>
+    <td width="295" valign="top"><p> MapRowToObject </p></td>
+  </tr>
+</table>
+<p>Calling a SQL UPDATE statement requires pretty much the same steps, except MapRowToObject is not necessary. We really need a Map-Object-To-Row method, however this can be taken care of in SetupParams. We can now refactor our abstract SQL Visitor so the database connection and query remain in the abstract class, and we introduce two more classes at the next level down; one for reading objects by calling SELECT SQL (TVisSQLReadAbs). And one for saving them (TVisSQLUpdateAbs) by running UPDATE, CREATE or DELETE SQL. The execute methods for each will have to be slightly different too. The UML of the modified SQL Visitor hierarchy is shown below:</p>
+<p> <img width="576" height="356" alt="UML SQL Visitors" src="3_TheVisitorAndSQLDatabases_Images/3_TheVisitorAndSQLDatabases_clip_image001_0003.gif"> </p>
+<p>The interface of the abstract SQL visitor is shown below. We have introduced the Database connection, Query as well as the Init and SetupParams methods.<br>
+</p>
+<pre>
+// The abstract SQL visitor contains the database connection, query
+// Init and SetupParams methods
+TVisSQLAbs = class( TVisitor )
+protected
+  FDB : TIBDatabase ;
+  FTransaction : TIBTransaction ;
+  FQuery : TIBQuery ;
+  procedure Init ; virtual ;
+  procedure SetupParams ; virtual ;
+public
+  constructor Create ; override ;
+  destructor Destroy ; override ;
+end ;
+</pre>
+<p>The interface of the abstract SQL read visitor is shown next. We have added the MapRowToObject method an have implemented Execute as shown beloe:
+</p>
+<pre>
+// The abstract SQL read visitor adds the MapRowToObject method, and
+// implements the calls to Init, SetupParams and MapRowToObject
+// (and FQuery.Open)in the correct order
+TVisSQLReadAbs = class( TVisSQLAbs )
+  protected
+    procedure MapRowToObject ; virtual ;
+  public
+    procedure Execute( pVisited : TVisited ) ; override ;
+  end ;
+</pre>
+<pre>
+procedure TVisSQLReadAbs.Execute(pVisited: TVisited);
+begin
+  inherited Execute( pVisited ) ;
+  if not AcceptVisitor then
+    Exit ; //==&gt;
+  Init ; // Set the SQL. Implemented in the concrete class
+  SetupParams ; // Set the Queries parameters. Implemented in the concrete class
+  FQuery.Active := True ;
+  while not FQuery.EOF do
+  begin
+    MapRowToObject ; // Map a query row to an object. Implemented in the concrete class
+    FQuery.Next ;
+  end ;
+end;</pre>
+<p>The interface of the SQL update visitor has no additional methods and only contains the overridden Execute procedure.
+</p>
+<pre>
+// The abstract SQL update visitor just has an execute method and implements
+// calls to Init and SetupParams (and FQueyr.SQLExec)
+TVisSQLUpdateAbs = class( TVisSQLAbs )
+public
+  procedure Execute( pVisited : TVisited ) ; override ;
+end ;
+</pre>
+<p>And the implementation of the abstract SQL update Visitor&rsquo;s Execute method looks like this:
+</p>
+<pre>
+procedure TVisSQLUpdateAbs.Execute(pVisited: TVisited);
+begin
+  inherited Execute( pVisited ) ;
+  if not AcceptVisitor then
+    Exit ; //==&gt;
+  Init ; // Set the SQL. Implemented in the concrete class
+  SetupParams ; // Set the Queries parameters. Implemented in the concrete class
+  FQuery.ExecSQL ;
+end;</pre>
+<p>Now that we have refactored the abstract SQL read and update visitors, it is a simple matter to write our first concrete Visitor to update objects to a SQL database.</p>
+<h2>Write an UPDATE Visitor</h2>
+<p>We now have a stub of an object that will walk us through the steps we have to take to update a changed object in the database. We have to implement the Init method, where we will write some SQL, and the SetupParams method where we will map the object&rsquo;s properties to the query&rsquo;s parameters. We will start by writing some update SQL like this:
+</p>
+<pre>
+update People
+set
+    Name = :Name
+   ,EMailAdrs = :EMailAdrs
+where
+    Name = :Old_Name
+and EMailAdrs = :Old_EMailAdrs
+</pre>
+<p>This SQL is the same as we get when we drop a TQuery on a form and hook it up to a TUpdateSQL. Now if we use a TQuery TClientDataSet on a for with a TDBGrid, it will internally maintain a list of changed rows, keeping a copy of the both the old and new values. This is where the Old_Name and Old_EmailAdrs values where derived from. Our framework as it stands has no knowledge of how an object looked before it was edited. We have taken over this responsibility from the TQuery and It&rsquo;s about now in our implementation of an OPF that we realise how cleaver the TQuery and TClientDataset components really are. This is the point when we can quite rightly reassess whether or not it is worth our while developing a custom persistence framework. (I still maintain that it&rsquo;s well worth the effort.)</p>
+<p>The solution to our problem is contained in a paper by Scott Ambler found at http://www.ambysoft.com/mappingObjects.pdf. The discussion starts off on page one with the heading &lsquo;The importance of OIDs&rsquo;. In a relational database, a row in a table can be uniquely identified by its primary key fields. In our People table, this field would probably be Name. That&rsquo;s fine, except when we want to join the People table to another table with a foreign key relationship. We can use the name field as the link between the two tables that will work well until we want to change a value in Name. How do we do that? The databases reverential integrity will make this very difficult. The solution (and Ambler spends considerable time driving this point home) is to make sure your primary key fields have no business meaning. Integer is the perfect candidate data type for OID&rsquo;s and is what we will use here. (Ambler describes several strategies to generating OIDs including High/Low integers, which is what is used in the tiOPF, GUIDS and others &ndash; his paper is well worth a read.)</p>
+<p>We now have several changes to make to our earlier work:</p>
+<ol>
+  <li>The table structure must be extended with the OID column, and the data populated with OID values.</li>
+  <li> Our TPerson class must be extended with an OID property</li>
+  <li> The read visitor must be extended to read an object&rsquo;s OID</li>
+</ol>
+<p>We will change the script to create our test table to look like this:</p>
+<pre>
+create table People
+( OID Integer not null,
+  Name VarChar( 20 ),
+  EMailAdrs VarChar( 60 ),
+  Primary Key ( OID )) ;
+</pre>
+<pre>
+insert into People values ( 1, &quot;Peter Hinrichsen&quot;, &quot;peter_hinrichsen@dontspamme.com&quot;);
+insert into People values ( 2, &quot;Don Macrae&quot;, &quot;don@dontspamme.com&quot; ) ;
+insert into People values ( 3, &quot;Malcolm Groves&quot;, &quot;malcolm@dontspamme.com&quot; ) ;
+</pre>
+<p>While we are adding the OID column, we will take the opportunity to make a NOT NULL field, and set it as the table&rsquo;s primary key.</p>
+<p>Next, our TPerson class must be extended with an OID property. At this stage in the development of the framework I decided that all objects would have a property called OID of type Int64. That&rsquo;s has been a good rule to enforce when building a system from scratch, with complete control over the database schema. However if we where building an OO front end to a legacy system, we would have to come up with a more versatile OID/Primary key strategy. As all objects will have an OID, lets add it to the abstract business object class. We will define a type called TOID that will be an Int64. This will make it easier to change the implementation of TOID down the track. Our re-factored TPerObjAbs class looks like this:
+</p>
+<pre>
+TOID = Int64 ;
+TPerObjAbs = class( TVisited )
+private
+  FOID: TOID;
+public
+  constructor Create ; virtual ;
+  property OID : TOID read FOID write FOID ;
+end;
+</pre>
+<p>And the changed TVisSQLReadPeople looks like this:</p>
+<pre>
+procedure TVisSQLReadPeople.MapRowToObject;
+var
+  lData : TPerson ;
+begin
+  lData := TPerson.Create ;
+  lData.OID := FQuery.FieldByName( 'OID' ).AsInteger ;
+  lData.Name := FQuery.FieldByName( 'Name' ).AsString ;
+  lData.EMailAdrs := FQuery.FieldByName( 'EMailAdrs' ).AsString ;
+  TPeople( Visited ).Add( lData ) ;
+end;</pre>
+<p>I have also refactored the CSV and TXT file visitors, but have not shown the code for these here.</p>
+<p>Now, back to where we where 20 minutes ago, we can write our UPDATE SQL using the OID value to find the record to update.</p>
+<pre>
+update People
+set
+   Name = :Name
+  ,EMailAdrs = :EMailAdrs
+where
+   OID = :OID</pre>
+<p>It is now possible to finish the TVisSQLUpdatePeople class with the implementation looking like this:</p>
+<pre>
+function TVisSQLUpdatePeople.AcceptVisitor: boolean;
+begin
+  result := Visited is TPerson ;
+end;</pre>
+<pre>
+procedure TVisSQLUpdatePeople.Init;
+begin
+  FQuery.SQL.Text :=
+    'update People ' +
+    'set ' +
+    ' Name = :Name ' +
+    ' ,EMailAdrs = :EMailAdrs ' +
+    'where ' +
+    ' OID = :OID' ;
+end;</pre>
+<pre>
+procedure TVisSQLUpdatePeople.SetupParams;
+var
+  lData : TPerson ;
+begin
+  lData := TPerson( Visited ) ;
+  FQuery.Params.ParamByName( 'OID' ).AsInteger := lData.OID ;
+  FQuery.Params.ParamByName( 'Name' ).AsString := lData.Name ;
+  FQuery.Params.ParamByName( 'EMailAdrs' ).AsString := lData.EMailAdrs ;
+end;</pre>
+<p>And of course don&rsquo;t forget to register TVisSQLUpdatePeople with the Visitor Manager in the unit&rsquo;s implementation section like this:</p>
+<pre>
+// Register the SQLSave Visitor
+initialization
+  gVisitorMgr.RegisterVisitor( 'SQLSave', TVisSQLUpdatePeople ) ;
+end.</pre>
+<h2>The need for an ObjectState property</h2>
+<p>It should now be easy to write a CREATE visitor. It can potentially share the same SetupParams code as the UPDATE visitor, with modified SQL. The implementation of the new Init method is shown below:</p>
+<pre>
+procedure TVisSQLCreatePeople.Init;
+begin
+   FQuery.SQL.Text :=
+   'insert into People ' +
+   '( OID, Name, EMailAdrs ) ' +
+   'values ' +
+   '( :OID, :Name, :EMailAdrs ) ' ;
+end;</pre>
+<pre>
+// Register the SQLSave Visitor
+initialization
+  gVisitorMgr.RegisterVisitor( 'SQLSave', TVisSQLUpdatePeople ) ;
+  gVisitorMgr.RegisterVisitor( 'SQLSave', TVisSQLCreatePeople ) ;
+end.</pre>
+<p>We register the new Visitor with the Visitor Manager, compile and run the code then test by inserting an new value and&hellip;</p>
+<p><img width="462" height="119" alt="Unique Key Error" src="3_TheVisitorAndSQLDatabases_Images/3_TheVisitorAndSQLDatabases_clip_image002_0000.jpg">
+</p>
+<p>&hellip;another problem. Primary key violation on table People. Well, we only have one primary key field and that&rsquo;s OID. This problem is being caused because we are calling our CREATE Visitor for every object in the list, not just those that that must be newly created. We need some way of identifying an object&rsquo;s state: Is it clean, does it need creating, updating or deleting? This can be done by introducing an ObjectState property at the level of TPerObjAbs.</p>
+<p>In the tiOPF, ObjectState is an ordinal type and can have the following values:</p>
+<table cellspacing="0" cellpadding="0">
+  <tr class="Normal">
+    <td width="109" valign="top"><p><strong> Value </strong></p></td>
+    <td width="481" valign="top"><p><strong> Description </strong></p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="109" valign="top"><p> posEmpty </p></td>
+    <td width="481" valign="top"><p> The object has been created, but not filled with data from the DB </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="109" valign="top"><p> posPK </p></td>
+    <td width="481" valign="top"><p> The object has been created, but only it's primary key has been read </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="109" valign="top"><p> posCreate </p></td>
+    <td width="481" valign="top"><p> The object has been created and populated with data and must be saved to the DB </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="109" valign="top"><p> posUpdate </p></td>
+    <td width="481" valign="top"><p> The object has been changed, the DB must be updated </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="109" valign="top"><p> posDelete </p></td>
+    <td width="481" valign="top"><p> The object has been deleted, it must be deleted from the DB </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="109" valign="top"><p> posDeleted </p></td>
+    <td width="481" valign="top"><p> The object was marked for deletion, and has been deleted in the database </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="109" valign="top"><p> posClean </p></td>
+    <td width="481" valign="top"><p> The object is 'Clean' no DB update necessary </p></td>
+  </tr>
+</table>
+<p>The TPerObjAbsState type is declared like this:</p>
+<pre>
+TPerObjectState = (
+   posEmpty, posPK, posCreate, posUpdate, posDelete, posDeleted, posClean ) ;</pre>
+<p>What we are aiming to do is to be able to selectively run visitors depending on whether an object needs to be newly created, updated or deleted from the database. For example, we would like to achieve the same as this case statement, only within the Visitor framework:</p>
+<pre>
+case Visited.ObjectState of
+posCreate : // Call CREATE SQL
+posUpdate : // Call UPDATE SQL
+posDelete : // Call DELETE SQL
+else
+  // Do nothing
+end ;</pre>
+<p>This can be achieved by checking Visited.ObjectState inside the Visitors AcceptVisitor method.</p>
+<p>Now we have several things to do to finish off the work with ObjectState:</p>
+<ol>
+  <li>et ObjectState when we create, update or delete an object in the GUI;</li>
+  <li>ilter out objects that have been marked as posDelete or posDeleted from the GUI;</li>
+  <li>heck the ObjectState property in AcceptVisitor; and </li>
+  <li>et the ObjectState back to posClean after a Visitor has run.</li>
+</ol>
+<p>Setting ObjectState when we create, update or delete an object in the GUI is a chore but can be made easier by introducing two new properties on TPerObjAbs: Deleted and Dirty. The interface of TPerObjAbs is extended as shown below:</p>
+<pre>
+TPerObjAbs = class( TVisited )
+private
+  FObjectState: TPerObjectState;
+protected
+  function GetDirty: boolean; virtual ;
+  procedure SetDirty(const Value: boolean);virtual ;
+  function GetDeleted: boolean;virtual ;
+  procedure SetDeleted(const Value: boolean);virtual ;
+public
+  property ObjectState : TPerObjectState read FObjectState write FObjectState ;
+  property Dirty : boolean read GetDirty write SetDirty ;
+  property Deleted : boolean read GetDeleted write SetDeleted ;
+end ;</pre>
+<p>The implementation of SetDirty and GetDirty is shown below. Set dirty will change the object state to posUpdate from posEmpty, posPK or posClean, and will not change the objec state if the object is already in one of the &lsquo;Dirty&rsquo; states.</p>
+<pre>
+procedure TPerObjAbs.SetDirty(const Value: boolean);
+begin
+  case ObjectState of
+  posEmpty : FObjectState := posCreate ;
+  posPK : FObjectState := posUpdate ;
+  posCreate : FObjectState := FObjectState ; // Do nothing
+  posUpdate : FObjectState := FObjectState ; // Do nothing
+  posDelete : FObjectState := FObjectState ; // Do nothing
+  posDeleted : FObjectState := FObjectState ; // Do nothing
+  posClean : FObjectState := posUpdate ;
+  end ;
+end;</pre>
+<p>GetDirty checks for an ObjectState of posCreate, posUpdate or posDelete. PosEmpty, posPK, posClean and posDeleted are not regarded as dirty state that mean the object has changed and must be saved back to the database.</p>
+<pre>
+function TPerObjAbs.GetDirty: boolean;
+begin
+  result := ObjectState in [posCreate, posUpdate, posDelete] ;
+end;</pre>
+<p>And the implementation of the Deleted Get and Set methods looks like this:</p>
+<pre>
+function TPerObjAbs.GetDeleted: boolean;
+begin
+  result := ObjectState in [posDelete, posDeleted];
+end;</pre>
+<p>As you can see, GetDeleted will return True if ObjectState is either posDelete or posDeleted.</p>
+<pre>
+procedure TPerObjAbs.SetDeleted(const Value: boolean);
+begin
+  if ObjectState &lt;&gt; posDeleted then
+    ObjectState := posDelete ;
+end;</pre>
+<p>We can now use ObjectState, and the two helper properties Deleted and Dirty to filter objects by state when saving to the database.</p>
+<h2>Insert a new TPerson in the GUI</h2>
+<p>Our ultimate aim in the next few pages is to write a SQL Create Visitor, but before we can do that, we must insert some new objects into the list for saving to the database. We shall do this by writing extending the edit dialog we developed in the previous chapter.</p>
+<p>The TtiListView on the main form has three event handlers: OnItemInsert, OnItemEdit and OnItemDelete. These are fired when the list view is double clicked, or right clicked and Insert, Edit or Delete are selected from the popup context menu. The code under OnItemInsert looks like this:<br>
+</p>
+<pre>
+procedure TFormMain_VisitorManager.LVItemInsert(
+  pLV: TtiCustomListView;
+  pData: TPersistent;
+  pItem: TListItem);
+var
+  lData : TPerson ;
+begin
+  lData := TPerson.Create ;
+  lData.ObjectState := posCreate ; // Set the ObjectState property here
+  lData.OID := GetNewOID ; // A helper function that generates a new OID
+  FPeople.Add( lData ) ;
+  TFormEditPerson.Execute( lData ) ;
+end;</pre>
+<p>The call to TformEditPerson.Execute( lData ) executes the following code, and shows the dialog box as in the screen shot below:</p>
+<pre>
+class procedure TFormEditPerson.Execute(pData: TPerObjAbs);
+var
+  lForm : TFormEditPerson ;
+begin
+  lForm := TFormEditPerson.Create( nil ) ;
+  try
+    lForm.Data := pData ;
+    lForm.ShowModal ;
+  finally
+    lForm.Free ;
+  end ;
+end;</pre>
+<p> <img width="294" height="141" alt="Edit a Person" src="3_TheVisitorAndSQLDatabases_Images/3_TheVisitorAndSQLDatabases_clip_image001_0004.gif"> </p>
+<p>Under the OK button of this dialog we set the TPerson&rsquo;s Dirty property to true like this:</p>
+<pre>
+procedure TFormEditPerson.btnOKClick(Sender: TObject);
+begin
+  FData.Dirty := true ;
+  ModalResult := mrOK ;
+end;</pre>
+<p>Having to remember to set Dirty := true after an edit is a chore, and is error prone. The need to do this could be removed by setting Dirty := true in each properties Set method, but there would need to be some code to turn this feature off while populating an object from the persistent store.</p>
+<p>Another solution is to use visual form inheritance and create an abstract edit dialog that takes care of setting pData.Dirty := True under the OK button. This is how we implement edit dialogs in the tiOPF and shall be discussed later.</p>
+<p>Now that we have set the ObjectState property after inserting a new object, we can write the Create Visitor.</p>
+<h2>Write a CREATE Visitor</h2>
+<p>The first thing we must do in the Create Visitor is check the ObjectState of the object being processed in the AcceptVisitor method. This will make it possible to run CREATE SQL against only the objects that have been newly created, and UPDATE SQL against objects that already exist in the database, and must be updated.</p>
+<p>An example of this is shown below:</p>
+<pre>
+function TVisSQLCreatePeople.AcceptVisitor: boolean;
+begin
+  result := ( Visited is TPerson ) and
+    ( TPerson( Visited ).ObjectState = posCreate ) ;
+end;</pre>
+<p>The full interface of the Create Visitor is shown below:</p>
+<pre>
+Interface
+TVisSQLCreatePeople = class( TVisSQLUpdateAbs )
+protected
+  function AcceptVisitor : boolean ; override ;
+  procedure Init ; override ;
+  procedure SetupParams ; override ;
+end ;</pre>
+<p>And the implementation of the Create Visitor is shown next:</p>
+<pre>
+implementation
+function TVisSQLCreatePeople.AcceptVisitor: boolean;
+begin
+  result := ( Visited is TPerson ) and
+    ( TPerson( Visited ).ObjectState = posCreate ) ;
+end;</pre>
+
+<pre>
+procedure TVisSQLCreatePeople.Init;
+begin
+  FQuery.SQL.Text :=
+    'insert into People ' +
+    '( OID, Name, EMailAdrs ) ' +
+    'values ' +
+    '( :OID, :Name, :EMailAdrs ) ' ;
+end;
+
+procedure TVisSQLCreatePeople.SetupParams;
+var
+  lData : TPerson ;
+begin
+  lData := TPerson( Visited ) ;
+  FQuery.Params.ParamByName( 'OID' ).AsInteger := lData.OID ;
+  FQuery.Params.ParamByName( 'Name' ).AsString := lData.Name ;
+  FQuery.Params.ParamByName( 'EMailAdrs' ).AsString := lData.EMailAdrs ;
+end;</pre>
+<p>This Visitor is registered with the Visitor Manager in the usual way:</p>
+<pre>
+initialization
+  gVisitorMgr.RegisterVisitor( 'SQLSave', TVisSQLCreatePeople ) ;
+end.</pre>
+<h2>Write a DELETE Visitor</h2>
+<p>Now that we have worked out how to determine which Visitors to call when, we can write our DELETE visitors. Their interface will be the same as the CREATE and UPDATE Visitors because they descend from the same parent (and use the Template Method pattern) and looks like this:</p>
+<pre>
+Interface
+TVisSQLUpdatePeople = class( TVisSQLUpdateAbs )
+protected
+  function AcceptVisitor : boolean ; override ;
+  procedure Init ; override ;
+  procedure SetupParams ; override ;
+end ;</pre>
+<p>The implementation of TVisSQLDeletePeople looks like this:</p>
+<pre>
+implementation
+function TVisSQLDeletePeople.AcceptVisitor: boolean;
+begin
+  result := ( Visited is TPerson ) and
+  ( TPerson( Visited ).ObjectState = posDelete ) ;
+end;</pre>
+<pre>
+procedure TVisSQLDeletePeople.Init;
+begin
+  FQuery.SQL.Text :=
+  'delete from People ' +
+  'where ' +
+  'OID = :OID' ;
+end;</pre>
+<pre>
+procedure TVisSQLDeletePeople.SetupParams;
+var
+  lData : TPerson ;
+begin
+  lData := TPerson( Visited ) ;
+  FQuery.Params.ParamByName( 'OID' ).AsInteger := lData.OID ;
+end;</pre>
+<p>And once again, the Visitor is registered with the Visitor Manager in the usual way:</p>
+<pre>
+initialization
+  gVisitorMgr.RegisterVisitor( 'SQLSave', TVisSQLDeletePeople ) ;
+end.</pre>
+<h2>Registering Visitors in the correct order</h2>
+<p>It is important to register the Visitors with the Visitor Manager in the correct order. This is especially important if a tree hierarchy has been modeled and is represented in the database by a one to many relationship with database referential integrity. The order that visitors are registered is the order that the SQL is called and I find that the most reliable is to register them in the order of Read, Delete, Update then Create. This is shown below:<br>
+</p>
+<pre>
+initialization
+  gVisitorMgr.RegisterVisitor( 'SQLRead', TVisSQLReadPeople ) ;
+  gVisitorMgr.RegisterVisitor( 'SQLSave', TVisSQLDeletePeople ) ;
+  gVisitorMgr.RegisterVisitor( 'SQLSave', TVisSQLUpdatePeople ) ;
+  gVisitorMgr.RegisterVisitor( 'SQLSave', TVisSQLCreatePeople ) ;
+end.</pre>
+<h2>Setting ObjectState back to posClean</h2>
+<p>Now that we have checked the ObjectState property for posCreate, posDelete or posUpdate in the Visitor&rsquo;s AcceptVisitor method and run the SQL in the Visitor we must set ObjectState back to posClean. To do this we will add an extra class between TVisitor and TVisSQLAbs called TVisPerObjectAwareAbs. This will let us descend our text file visitors from the same parent as the SQL visitor giving them both access to the new method called Final. The interface and implementation of TVisPerObjectAwareAbs looks like this:</p>
+<pre>
+interface
+  TVisPerObjAwareAbs = class( TVisitor )
+  protected
+    procedure Final ; virtual ;
+  end ;</pre>
+<pre>
+implementation
+procedure TVisPerObjAwareAbs.Final;
+begin
+  if TPerObjAbs( Visited ).ObjectState = posDelete then
+    TPerObjAbs( Visited ).ObjectState := posDeleted
+  else
+    TPerObjAbs( Visited ).ObjectState := posClean ;
+end;</pre>
+<p>We can now call Final in the Execute method of both the Read and Update Visitors. The Execute method of TVisSQLReadAbs now looks like this:</p>
+<pre>
+procedure TVisSQLReadAbs.Execute(pVisited: TVisited);
+begin
+  inherited Execute( pVisited ) ;
+  if not AcceptVisitor then
+    Exit ; //==&gt;
+  Init ; // Set the SQL. Implemented in the concrete class
+  SetupParams ; // Set the Queries parameters. Implemented in the concrete class
+  FQuery.Active := True ;
+  while not FQuery.EOF do
+  begin
+    MapRowToObject ; // Map a query row to an object. Implemented in the concrete class
+    FQuery.Next ;
+  end ;
+  Final ;
+end;</pre>
+<p>And the execute method of TVisSQLUpdateAbs looks like this:</p>
+<pre>
+procedure TVisSQLUpdateAbs.Execute(pVisited: TVisited);
+begin
+  inherited Execute( pVisited ) ;
+  if not AcceptVisitor then
+    Exit ; //==&gt;
+  Init ; // Set the SQL. Implemented in the concrete class
+  SetupParams ; // Set the Queries parameters. Implemented in the concrete class
+  FQuery.ExecSQL ;
+  Final ;
+end;</pre>
+<p>The UML of the SQL visitor class hierarchy now looks like this:</p>
+<p> <img width="546" height="428" alt="UML SQL Visitors" src="3_TheVisitorAndSQLDatabases_Images/3_TheVisitorAndSQLDatabases_clip_image001_0005.gif"> </p>
+<h2>Filtering in the GUI</h2>
+<p>Our objects can now have two states that should prevent them from being displayed in the GUI: posDelete (meaning they have been marked for deletion, but have not yet been deleted from the database) and posDeleted (meaning they have been marked for deletion, and removed from the database). If either of these conditions is true, the Deleted property will return true. If we check the deleted property while painting the TtiListView, we can filter the records we don&rsquo;t want to display. The TtiListView has an OnFilterRecord event that can be programmed like this:</p>
+<pre>
+procedure TFormMain_VisitorManager.LVFilterData(
+   const pData: TPersistent;
+   var   pbInclude: Boolean);
+begin
+  pbInclude := not TPerObjAbs( pData ).Deleted ;
+end;</pre>
+<p>When the TtiListView&rsquo;s ApplyFilter property is set to True, the objects that have an ObjectState of posDelete or posDeleted will be filtered out and not displayed.</p>
+<p>Add some logging to help debugging</p>
+<p>It does not take much time debugging this code before you will realise how difficult it can be to keep track of what is going on. The business object model is decoupled from the persistence layer, but with the continual looping within the TVisited.Iterate method, tracking errors, especially in the SQL can be quite a torturous process. The solution is to add some logging and to help with this and have developed the TtiLog family of classes.</p>
+<p>To add logging to the application, add the unit tiLog.pas to the tiPtnVisSQL.pas uses clause, then add the Log( ) command in the Visitor&rsquo;s execute method like this:</p>
+<pre>
+procedure TVisSQLReadAbs.Execute(pVisited: TVisited);
+begin
+  inherited Execute( pVisited ) ;
+  if not AcceptVisitor then
+    Exit ; //==&gt;
+  Log( 'Calling ' + ClassName + '.Execute' ) ;
+  Init ; // Set the SQL. Implemented in the concrete class
+  SetupParams ; // Set the Queries parameters. Implemented in the concrete class
+  FQuery.Active := True ;
+  while not FQuery.EOF do
+  begin
+    MapRowToObject ; // Map a query row to an object. Implemented in the concrete class
+    FQuery.Next ;
+  end ;
+  Final ;
+end;</pre>
+<p>and this...</p>
+<pre>
+procedure TVisSQLUpdateAbs.Execute(pVisited: TVisited);
+begin
+  inherited Execute( pVisited ) ;
+  if not AcceptVisitor then
+    Exit ; //==&gt;
+  Log( 'Calling ' + ClassName + '.Execute' ) ;
+  Init ; // Set the SQL. Implemented in the concrete class
+  SetupParams ; // Set the Queries parameters. Implemented in the concrete class
+  FQuery.ExecSQL ;
+  Final ;
+end;</pre>
+<p>It is also a good idea to add logging to AcceptVisitor, SetupParams, MapRowToObject and Final with each call that is likely to call an exception being surrounded by a try except block. This makes it easier to locate the source of an error by reading the log trace, which is much quicker than having to step through the code in the IDE.</p>
+<p>For example, the TVisSQLUpdateAbs.Execute method is refactored like this in its implementation in the tiOPF:</p>
+<pre>
+procedure TVisQryUpdate.Execute( pData: TVisitedAbs);
+  procedure DoExecuteQuery ;
+  begin
+    try
+      Query.ExecSQL ;
+    except
+      on e:exception do
+        tiFmtException( e, ClassName, '_ExecuteQuery',
+          DBExceptionMessage( 'Error opening query', e )) ;
+    end ;
+ end ;
+begin
+  Inherited Execute( pData ) ;
+  if not DoAcceptVisitor then
+    exit ; //==&gt;
+  DoInit ;
+  DoGetQuery ;
+  DoSetupParams ;
+  DoExecuteQuery ;
+end ;</pre>
+<p>To get logging working you also have to call SetupLogForClient somewhere in the application and the DPR file is as good a place as any. To turn visual logging on, you must pass the &ndash;lv parameter on the command line. An example of how to use the tiLog classes can be found in the DemoTILog directory. An application running with visual logging turned on will typically look like this:</p>
+<p align="left"><img width="576" height="116" alt="Event Log" src="3_TheVisitorAndSQLDatabases_Images/3_TheVisitorAndSQLDatabases_clip_image001_0006.gif"></p>
+<p align="left"> <img width="342" height="196" alt="Screenshot 02" src="3_TheVisitorAndSQLDatabases_Images/3_TheVisitorAndSQLDatabases_clip_image001_0007.gif"> </p>
+<h2>Change the CSV and TXT visitors to ignore deleted objects
+</h2>
+<p>When we first wrote the TVisCSVSave and TVisTXTSave classes, we assumed we wanted to save all the objects in the list that was passed to the visitor manager. This was a good strategy for persisting to a text file, but as we discussed above, when saving to a SQL database, we must maintain a list of objects that are marked for deletion so they can be removed from the database as chapter of the save.</p>
+<p>In the main form, under the delete button we had the following code that removes then frees the object from the list:
+</p>
+<pre>
+procedure TFormMain_VisitorManager.LVItemDelete(
+   pLV: TtiCustomListView; pData: TPersistent; pItem: TListItem);
+begin
+  FPeople.List.Remove( pData ) ;
+end;</pre>
+<p>For saving to a SQL database, this has been changed to marking the object for deletion, rather than removing it from the list.</p>
+<pre>
+procedure TFormMain_VisitorManager.LVItemDelete(
+   pLV: TtiCustomListView; pData: TPersistent; pItem: TListItem);
+begin
+  TPerObjAbs( pData ).Deleted := true ;
+end;</pre>
+<p>The AcceptVisitor method in TVisCSVSave and TVisTXTSave must be extended to skip over records that have been deleted, or marked for deletion:</p>
+<pre>
+function TVisCSVSave.AcceptVisitor : boolean;
+begin
+  result := ( Visited is TPerson ) and 
+    ( not TPerson( Visited ).Deleted ) ;
+end;</pre>
+<p>Enable the save button in the GUI only when the object hierarchy is dirty</p>
+<p>The way we have designed the application&rsquo;s main form has the save buttons enabled all the time. It would be nice if we could disable the save button when the data in the hierarchy is clean and enable the buttons only when a CREATE, UPDATE or DELETE must be made.</p>
+<p>We have added a Dirty property to the TPerObjAbs class, but this only checks the one classes ObjectState. What we need is a way of iterating over all owned objects and to check if any of them are dirty. This is easily achieved by writing an IsDirty Visitor and calling it inside the object&rsquo;s GetDirty method. The interface of TVisPerObjIsDirty looks like this:</p>
+<pre>
+TVisPerObjIsDirty = class( TVisitorAbs )
+private
+ FbDirty: boolean;
+protected
+  function AcceptVisitor : boolean ; override ;
+public
+  procedure Execute( pVisited : TVisitedAbs ) ; override ;
+  property Dirty : boolean read FbDirty write FbDirty ;
+end ;</pre>
+<p>And the implementation looks like this:</p>
+<pre>
+function TVisPerObjIsDirty.AcceptVisitor : boolean;
+begin
+  result := ( Visited is TPerObjAbs ) and ( not Dirty ) ;
+end;</pre>
+<pre>
+procedure TVisPerObjIsDirty.Execute(pVisited: TVisitedAbs);
+begin
+  Inherited Execute( pVisited ) ;
+  if not AcceptVisitor then
+    exit ; //==&gt;
+  Dirty := TPerObjAbs( pVisited ).ObjectState in
+   [ posCreate,
+   posUpdate,
+   posDelete
+   ]
+end;</pre>
+<p>The call to this Visitor is wrapped up in the TPerObjAbs.GetDirty method like this:</p>
+<pre>
+function TPerObjAbs.GetDirty: boolean;
+var
+  lVis : TVisPerObjIsDirty ;
+begin
+  lVis := TVisPerObjIsDirty.Create ;
+  try
+    self.Iterate( lVis ) ;
+    result := lVis.Dirty ;
+  finally
+    lVis.Free ;
+  end ;
+end;</pre>
+<p>This lets us extend the application's main form by adding an ActionList. Double click the ActionList and add three actions as shown below. Move the code from the three save buttons OnClick methods to the actions then hook the save buttons up to the actions.</p>
+<p>In the ActionList's OnUpdate method add the following code to check the Dirty state of the data hierarchy and enable or disable the save buttons as necessary:</p>
+<pre>
+procedure TFormMain_VisitorManager.ALUpdate(Action: TBasicAction;
+  var Handled: Boolean);
+var
+  lDirty : boolean ;
+begin
+  lDirty := FPeople.Dirty ;
+  aSaveToInterbase.Enabled := lDirty ;
+  aSaveToCSV.Enabled := lDirty ;
+  aSaveToTXT.Enabled := lDirty ;
+  Handled := true ;
+end;</pre>
+<p>Now the save buttons are disabled when the object hierarchy is clean, and disabled when the object hierarchy is dirty like this:</p>
+<table cellspacing="0" cellpadding="0">
+  <tr class="Normal">
+    <td width="295" valign="top"><b>The object Hierarchy is clean</b></td>
+    <td width="295" valign="top"><b>The Object Hierarchy is dirty</b></td>
+  </tr>
+  <tr class="Normal">
+    <td width="295" valign="top"><p align="center"><img width="286" height="175" src="3_TheVisitorAndSQLDatabases_Images/3_TheVisitorAndSQLDatabases_clip_image002_0001.jpg"></p></td>
+    <td width="295" valign="top"><p align="center"><img width="286" height="175" src="3_TheVisitorAndSQLDatabases_Images/3_TheVisitorAndSQLDatabases_clip_image004.jpg"></p></td>
+  </tr>
+</table>
+<h2>Adding more database constraints</h2>
+<p>Now let&rsquo;s create a slightly more realistic database schema by adding a unique key on the People table. This can be done by modifying the create SQL as shown below:
+</p>
+<pre>
+create table People
+   ( OID Integer not null,
+   Name VarChar( 20 ),
+   EMailAdrs VarChar( 60 ),
+   Primary Key ( OID )) ;</pre>
+<pre>
+create unique index People_uk on People ( name, EMailAdrs ) ;</pre>
+<pre>
+insert into People values ( 1, &quot;Peter Hinrichsen&quot;, &quot;peter_hinrichsen@dontspamme.com&quot;);
+insert into People values ( 2, &quot;Don Macrae&quot;, &quot;don@dontspamme.com&quot; ) ;
+insert into People values ( 3, &quot;Malcolm Groves&quot;, &quot;malcolm@dontspamme.com&quot; ) ;</pre>
+<p>Run the application and deliberately try to insert duplicate name records to see how the framework handles a database error. Add two duplicate records then click &lsquo;Save to Interbase&rsquo;. You will get unique key error like the one shown below:</p>
+<p> <img width="521" height="229" alt="Duplicate Error" src="3_TheVisitorAndSQLDatabases_Images/3_TheVisitorAndSQLDatabases_clip_image001_0008.gif"> </p>
+<p>Click the &lsquo;Read from Interbase&rsquo; button and you will find that one record was saved, while the other was not. The record that was not saved is still in the client with an ObjectState of posCreate. What we clearly want here is some transaction management so either all objects are saved, or none are saved. Before we can setup transaction management, we must modify the framework so all the visitors share the same database connection.</p>
+<h2>Share the database connection between Visitors</h2>
+<p>The First step towards providing transaction support is to change the framework so all calls to the database are funneled through the same database connection and transaction object. You will remember that the TVisSQLAbs class owned an instance of a TIBDatabase and TIBTransaction. This meant that every visitor was processed within its own database connection and transaction. Transactions would be implicitly started and committed by Delphi around each SQL statement. What we want is for all visitors to share the same database connection, and for the Visitor Manager to have control over the database transaction.</p>
+<p>To achieve this, we will do four things:</p>
+<ol>
+  <li> Move the database and transaction objects out of the TVisSQLAbs class and wrap them up in an object we will call TtiDatabase. (This will become especially useful when we start work on building a swappable persistence layer. Also, one of the slowest things you can do to a database is connect to it, so sharing a database connection between visitor will improve the application&rsquo;s performance.)</li>
+  <li> Modify the TVisSQLAbs class with a Database property. The SetDatabase method will assign a field variable for later reference, and hook the Query object up to the database connection at the same time.</li>
+  <li> Create a single instance (Singleton pattern) of the database object that has application wide visibility.</li>
+  <li>Modify the Visitor Manager so it sets each Visitors Database property before executing, and then clears it when done.</li>
+</ol>
+<p>These four steps are detailed below.</p>
+<p>Firstly, we will move the database and transaction objects into their own class. The interface of TtiDatabase is shown here:</p>
+<pre>
+TtiDatabase = class( TObject )
+private
+  FDB : TIBDatabase ;
+  FTransaction : TIBTransaction ;
+public
+  constructor Create ;
+  destructor Destroy ; override ;
+  property DB : TIBDatabase read FDB ;
+end ;
+</pre>
+<p>And the implementation of TtiDatabase is shown here:</p>
+<pre>
+constructor TtiDatabase.Create;
+begin
+  inherited ;
+  FDB := TIBDatabase.Create( nil ) ;
+  FDB.DatabaseName := 'C:\TechInsite\OPFPresentation\Source\3_SQLVisitors\Test.gdb' ;
+  FDB.Params.Add( 'user_name=SYSDBA' ) ;
+  FDB.Params.Add( 'password=masterkey' ) ;
+  FDB.LoginPrompt := False ;
+  FDB.Connected := True ;
+  FTransaction := TIBTransaction.Create( nil ) ;
+  FTransaction.DefaultDatabase := FDB ;
+  FDB.DefaultTransaction := FTransaction ;
+end;</pre>
+<pre>
+destructor TtiDatabase.Destroy;
+begin
+  FTransaction.Free ;
+  FDB.Free ;
+  inherited;
+end;</pre>
+<p>As well as moving the database connection out of the Visitor class, and allowing it to be shared between all visitors in the application, we have wrapped the TIBDatabase component in our own code. This is an important step towards using the Adaptor pattern to make our framework independent of any one-database vendor&rsquo;s API.</p>
+<p>Next, we modify the TVisSQLAbs class. The owned database and transaction objects are removed and a field variable is added to hold a pointer to the shared database object. A database property with a SetDatabase method is added and SetDatabase is responsible for hooking the query object up to the database connection. The interface of TVisSQLAbs is shown below:</p>
+<pre>
+TVisSQLAbs = class( TVisPerObjAwareAbs )
+private
+  FDatabase: TtiDatabase;
+  procedure SetDatabase(const Value: TtiDatabase);
+public
+  constructor Create ; override ;
+  destructor Destroy ; override ;
+  property Database : TtiDatabase read FDatabase write SetDatabase ;
+end ;</pre>
+<p>The implementation of TVisSQLAbs.SetDatabase is shown below. Notice how there is protection against Value being passed as nil.</p>
+<pre>
+procedure TVisSQLAbs.SetDatabase(const Value: TtiDatabase);
+begin
+  FDatabase := Value;
+  if FDatabase &lt;&gt; nil then
+    FQuery.Database := FDatabase.DB
+  else
+   FQuery.Database := nil ;
+end;</pre>
+<p>Thirdly we require a globally visible, single instance of the database connection. (This is not how we will ultimately implement a database connection &ndash; we will use a thread safe database connection pool, but this is sufficient to get us started.) I use something I call a poor man&rsquo;s Singleton, a unit wide variable hiding behind a globally visible function. This implementation does not come close to providing what a GoF singleton requires, but it does the job and is quick to implement. The code for the single instance database connection is shown below:</p>
+<pre>
+interface
+function gDBConnection : TtiDatabase ;
+implementation
+var
+  uDBConnection : TtiDatabase ;
+function gDBConnection : TtiDatabase ;
+begin
+  if uDBConnection = nil then
+    uDBConnection := TtiDatabase.Create ;
+  result := uDBConnection ;
+end ;</pre>
+<p>The final changes we must make are to extend TVisitorMgr.Execute with some code to set the database property on the visitor before calling TVisitor.Execute. There is a complication here because not all Visitors will have a database property, only those that descend from TVisSQLAbs. As a work around we will check the type of the Visitor, and if it descends from TVisSQLAbs, assume it has a database property and hook it up to the default application database object. We also clear the Visitors database property after the visitor has executed. (This is a bit of a hack and is not how we solve the problem in the framework. We actually have another class called a TVisitorController that is responsible for performing tasks before and after visitors execute. Much more elegant, but rather more complex too.) The modified TVisitorMgr.Execute method is shown below:</p>
+<pre>
+procedure TVisitorMgr.Execute(const pCommand: string; const pData: TVisited);
+var
+  i : integer ;
+  lVisitor : TVisitor ;
+begin
+  for i := 0 to FList.Count - 1 do
+    if SameText( pCommand, TVisitorMapping( FList.Items[i] ).Command ) then
+    begin
+      lVisitor := TVisitorMapping( FList.Items[i] ).VisitorClass.Create ;
+      try
+        if ( lVisitor is TVisSQLAbs ) then
+          TVisSQLAbs( lVisitor ).Database := gDBConnection ;
+        pData.Iterate( lVisitor ) ;
+        if ( lVisitor is TVisSQLAbs ) then
+          TVisSQLAbs( lVisitor ).Database := nil ;
+      finally
+        lVisitor.Free ;
+      end ;
+  end ;
+end;</pre>
+<p>The changes we have made to this section ensure that all database activity is channeled through a single database connection. The next step is to modify TVisitorMgr.Execute so all SQL statements are called within a single database transaction.</p>
+<h2>Manage transactions</h2>
+<p>To add transaction support, we must to two things:</p>
+<ol>
+  <li>1. Expose transaction support through the procedures StartTransaction, Commit and RollBack on the database wrapper class TtiDatabase</li>
+  <li>2. Extend the Visitor Manager&rsquo;s Execute method with the ability to start a transaction when a group of objects is passed to Execute and commit or roll back the transaction when processing has either finished successfully, or failed.</li>
+</ol>
+<p>Firstly, we extended interface of TtiDatabase, with the additional methods StartTransaction, Commit and RollBack as in the code below:</p>
+<pre>
+TtiDatabase = class( TObject )
+private
+  FDB : TIBDatabase ;
+  FTransaction : TIBTransaction ;
+public
+  constructor Create ;
+  destructor Destroy ; override ;
+  property DB : TIBDatabase read FDB ;
+  procedure StartTransaction ;
+  procedure Commit ;
+  procedure Rollback ;
+end ;
+ </pre>
+<p>The implementation of TtiDatabase is shown next. You can see that the StartTransaction, Commit and RollBack methods simply delegate the call to the owned TIBTransaction object. The reasons for this shall be looked at in more detail when we study swappable persistence layers and the Adaptor pattern.</p>
+<pre>
+procedure TtiDatabase.StartTransaction;
+begin
+  FTransaction.StartTransaction ;
+end;
+
+procedure TtiDatabase.Commit;
+begin
+  FTransaction.Commit ;
+end;
+
+procedure TtiDatabase.Rollback;
+begin
+  FTransaction.RollBack ;
+end;
+</pre>
+<p>Secondly, we extend the TVisitorManager.Execute method transaction 
+support. This means changes in three places. Firstly we start the 
+transaction after assigning the database connection to the visitor&rsquo;s 
+Database property. Next we wrap the call to pData. Iterate(lVisitor) up 
+in a try except block and call RollBack if an exception is raised. We 
+re-raise the exception after calling RollBack so it will bubble to the 
+top of any exception handling code we have added to our application. 
+The final change is to add the code to call commit that is executed when 
+the call to pData. Iterate( lVisitor ) is completed successfully. The 
+modified TVisitorMgr.Execute method is shown next:</p>
+<pre>
+procedure TVisitorMgr.Execute(const pCommand: string; const pData: TVisited);
+var
+  i: integer;
+  lVisitor: TVisitor;
+begin
+  for i := 0 to FList.Count - 1 do
+  if SameText(pCommand, TVisitorMapping(FList.Items[i]).Command) then
+  begin
+    lVisitor := TVisitorMapping(FList.Items[i]).VisitorClass.Create;
+    try
+      if (lVisitor is TVisSQLAbs) then
+      begin
+        TVisSQLAbs(lVisitor).Database := gDBConnection;
+        gDBConnection.StartTransaction;
+      end 
+      try
+        pData.Iterate(lVisitor);
+      except
+        on E: Exception do
+        begin
+          if (lVisitor is TVisSQLAbs) then
+          begin
+            gDBConnection.Rollback;
+            TVisSQLAbs(lVisitor).Database := nil;
+          end;
+          raise;
+        end;
+      end;
+      if (lVisitor is TVisSQLAbs) then
+      begin
+        gDBConnection.Commit;
+        TVisSQLAbs(lVisitor).Database := nil;
+      end;
+    finally
+      lVisitor.Free;
+    end;
+  end;
+end;</pre>
+<p>This transaction strategy will ensure that either all of the objects are saved to the database, or none are saved to the database and will guarantee that the database is never left in an unstable state. There is one further feature to add which will prevent a Visitor&rsquo;s Final method from being called until the database transaction is successfully committed. At the moment, Final is called after the query has executed. This means that the following sequence of events is possible:</p>
+<p>Object_1 Run SaveSQL<br>
+  Object_1 Call Final and set ObjectState to posClean<br>
+  Object_2 Run SaveSQL Raise an exception and roll back database.</p>
+<p>This will leave the Object_1.ObjectState property incorrectly set to posClean. This is a little tricky to implement and is managed by the TvisitorController class which is a feature of the framework code you can download. We shall discuss the theory of how this was done in a future chapter.</p>
+<h2>Summary</h2>
+<p>We have covered a lot of material in this chapter with the main 
+emphasis on extending the Visitor framework to support persistence to 
+a SQL database. We achieved this by creating an application wide database 
+object (which will be moved to a database connection pool in a future 
+chapter), and adding a TQuery object that is owned by the Visitor. 
+We implemented a structured sequence of tasks in the abstract SQL 
+Visitor&rsquo;s Execute method that was inspired by GoF&rsquo;s Template 
+Method Pattern. We created abstract SQLRead and SQLUpdate Visitors, 
+then implemented concrete classes to manage the READ, CREATE, UPDATE 
+and DELETE SQL calls that are necessary to persist our TPerson class. 
+We added a debug log trace to the Visitor framework to help the 
+programmer keep track of what was going on inside the tight looping 
+caused by the TVisited&rsquo;s Iterate method. We explored the idea 
+of adding a Dirty property to the TPerObjAbs class which can be 
+used to enable or disable a save button on a form, then finally 
+implemented transaction support within the TVisitorMgr.Execute method 
+so a group of objects is either all saved, or not saved at all.</p>
+<h2>The next section</h2>
+<p>In the next session we shall extend the abstract business object model 
+with additional methods and properties as well as modify the Iterate 
+method so it will allow us to iterate over more complex hierarchies of 
+objects. <a href="4_BuildingAnAbstractBOMWithTheComposite.shtml">The next 
+section can be read here.</a></p>
+
+<!--#include virtual="/Shared/Footer.html"-->
+
+</body>
+</html>

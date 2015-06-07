@@ -1,0 +1,54 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>Things we love and things we hate about tiOPF</title>
+<!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>Things we love and things we hate about tiOPF </h1>
+<h2>Love:</h2>
+<ul>
+  <li>Simplicity - very few concepts to remember;</li>
+  <li>Flexibility - Performance tuning opportunities, database backend,
+GUI - all<br>
+flexible;</li>
+  <li>Code base - All the "hard" stuff is done;</li>
+  <li>Behaviour modification - enforces good coding style - use of OO;
+Scaleable - Seems little in the backend that cannot be extended or
+changed as/if required;</li>
+  <li>Portability - Conceptually easy to migrate to .Net using
+reflection and same Visitor pattern;</li>
+  <li>Open-source - Collective/ collaborative ... sense of being a part
+of a good piece of work;</li>
+  <li>Design Patterns - Visitor pattern is amazingly useful;
+Independent - Innovative;</li>
+  <li>Dunit - Greatly improves code quality;</li>
+  <li>Speed of development - Its very, very easy to get a&nbsp; basic
+app up and running.</li>
+  <li>The most powerful feature of the tiOPF has to be the Visitor. For
+us the<br>
+business, and the model of that business, is everything and the Visitor
+pattern allows us to painlessly traverse the 'model' and perform a
+specific action across a hierarchy of related entities. As a result, it
+assists in allowing us to focus more on the business and less on the
+technical code.</li>
+</ul>
+<h2>Hate:</h2>
+<ul>
+  <li>Having one day to migrate to .Net while Win32, Delphi and tiOPF
+are such a good combo.</li>
+  <li>Coding a routine to find it in the framework, coded better and
+Dunit tested already.</li>
+  <li>Lack of good UI controls</li>
+  <li>No built in class editor</li>
+  <li>Will not auto create a database schema an keep the schema in sync
+with the object model</li>
+  <li>It's based on RTTI and published properties. Some OPF zealots
+think this is bad. Published properties do, however make for very easy
+to read and understand object models</li>
+</ul>
+<p class="Normal">&nbsp;</p>
+<!--#include virtual="/Shared/Footer.html"-->
+</body>
+</html>

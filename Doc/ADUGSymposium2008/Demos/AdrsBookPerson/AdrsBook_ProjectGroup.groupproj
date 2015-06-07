@@ -1,0 +1,44 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{6eeaa708-9f23-4cee-8bbe-85412e62376c}</ProjectGuid>
+  </PropertyGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Projects Include="GUI\AdrsBookGUIModalForms.dproj" />
+    <Projects Include="UnitTests\DUnitAdrsBookGUI.dproj" />
+  </ItemGroup>
+  <ProjectExtensions>
+    <Borland.Personality>Default.Personality</Borland.Personality>
+    <Borland.ProjectType />
+    <BorlandProject>
+  <BorlandProject xmlns=""> <Default.Personality> </Default.Personality> </BorlandProject></BorlandProject>
+  </ProjectExtensions>
+  <Target Name="DUnitAdrsBookGUI">
+    <MSBuild Projects="UnitTests\DUnitAdrsBookGUI.dproj" Targets="" />
+  </Target>
+  <Target Name="DUnitAdrsBookGUI:Clean">
+    <MSBuild Projects="UnitTests\DUnitAdrsBookGUI.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="DUnitAdrsBookGUI:Make">
+    <MSBuild Projects="UnitTests\DUnitAdrsBookGUI.dproj" Targets="Make" />
+  </Target>
+  <Target Name="AdrsBookGUIModalForms">
+    <MSBuild Projects="GUI\AdrsBookGUIModalForms.dproj" Targets="" />
+  </Target>
+  <Target Name="AdrsBookGUIModalForms:Clean">
+    <MSBuild Projects="GUI\AdrsBookGUIModalForms.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="AdrsBookGUIModalForms:Make">
+    <MSBuild Projects="GUI\AdrsBookGUIModalForms.dproj" Targets="Make" />
+  </Target>
+  <Target Name="Build">
+    <CallTarget Targets="DUnitAdrsBookGUI;AdrsBookGUIModalForms" />
+  </Target>
+  <Target Name="Clean">
+    <CallTarget Targets="DUnitAdrsBookGUI:Clean;AdrsBookGUIModalForms:Clean" />
+  </Target>
+  <Target Name="Make">
+    <CallTarget Targets="DUnitAdrsBookGUI:Make;AdrsBookGUIModalForms:Make" />
+  </Target>
+  <Import Condition="Exists('$(MSBuildBinPath)\Borland.Group.Targets')" Project="$(MSBuildBinPath)\Borland.Group.Targets" />
+</Project>

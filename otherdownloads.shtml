@@ -1,0 +1,57 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>tiOPF Home Page</title>
+  <meta name="description"
+ content="tiOPF - The Free, Open Source object persistence framework for Delphi 7, BDS2006 &amp; Free Pascal. Helps you build complex OO applications with data being saved to SQLServer, Interbase, Oracle, FireBird, XML, CSV or to a remote database proxy server via HTTP. Has been used in large and small projects since 1998. Full source code with 1300 Unit Tests to assure quality. News group for peer support. Automatic build each night with all Unit Tests being run against each persistence layer against Delphi &amp; FPC compilers.">
+  <meta name="keywords"
+ content="tiOPF, Object Persistence Framework, OPF, Persistence Framework, Delphi, Borland, InstantObjects, Bold, ECO, Interbase, FireBird, Oracle, SQLServer, XML, CSV, Access, Database Layer, 3 Tiered, Object Orientated, OO, Multi Tiered, DBI, Database Interface Module, BOM, Business Object Model, RDBMS OO Mapping, Scott Ambler, GoF, Design Patterns, Visitor Pattern, Composite Pattern, Adaptor Pattern">
+<!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>Some other downloads you may require when using the tiOPF</h1>
+<ul>
+<li><p>DUnit2 or FPTest - the eXtreme testing frameworks used in the tiOPF.
+  <ul>
+    <li><a href="http://sourceforge.net/projects/dunit2/">http://sourceforge.net/projects/dunit2/</a>
+        <br>A slightly older version of DUnit2 is also included in the tiOPF repository.
+    <li><a href="http://github.com/graemeg/fptest/">http://github.com/graemeg/fptest/</a>
+  </ul>
+</p>
+ 
+<li><p>FinalBuilder, used for automating the build process: <a
+ href="http://www.finalbuilder.com/">http://www.finalbuilder.com/</a></p>
+ 
+<li><p>Interbase 6.01 server and client (or higher). NOTE: The interbase
+persistence layer will not work with the versions of Interbase and IBX
+that come with Delphi 5 <a
+ href="http://info.borland.com/devsupport/interbase/opensource/#ibx">http://info.borland.com/devsupport/interbase/opensource/#ibx</a></p>
+
+<li><p>Firebird, the open source replacement for Interbase <a
+ href="http://www.ibphoenix.com/">http://www.ibphoenix.com/</a></p>
+
+<li><p>Interbase Express components (IBX) <a
+ href="http://codecentral.borland.com/codecentral/ccweb.exe/author?authorid=102">http://codecentral.borland.com/codecentral/ccweb.exe/author?authorid=102</a></p>
+
+<li><p>Component for colour syntax highlighting of SQL in the tiSQLManager
+and tiSQLEditor: <a href="http://synedit.sourceforge.net/">http://synedit.sourceforge.net/</a></p>
+
+<li><p>If you are going to use the ADO persistence layer with Delphi 5,
+make sure you have applied the D5 ADO Exprdess upgrade pack 2: <a
+ href="http://info.borland.com/devsupport/delphi/downloads/index.html">http://info.borland.com/devsupport/delphi/downloads/index.html</a></p>
+
+<li><p>The Oracle persistence layer was written with 'Direct Oracle Access'
+DOA: <a href="http://www.allroundautomations.nl/">http://www.allroundautomations.nl/</a></p>
+
+<li><p>FBLib Firebird Library is another component suite used to implement a Firebird persistence layer.
+It is also a cross-platform component suite talking directly to Firebird. You can download it from: 
+<a href="http://fblib.altervista.org/">http://fblib.altervista.org/</a>. Alternatively a
+more up-to-date version of FBLib is maintained in the tiOPF repository in 
+the 3rdParty/FBLib directory.</p>
+
+</ul>
+
+<!--#include virtual="/Shared/Footer.html"-->
+</body>
+</html>

@@ -1,0 +1,1745 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>tiOPF Documentation - A worked example of using the tiOPF</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>5. A Worked Example of Using the tiOPF </h1> 
+<h2 class="Normal">The aims of this chapter</h2>
+<p>In the previous chapters, we have seen how to use the Visitor pattern, 
+along with the Template Method to map a business object model into a 
+relational database. We have also developed an abstract business object, and 
+collection object to descend our concrete classes from. In this chapter, we 
+will build on what we have covered and create a working application using the 
+TechInsite object persistence framework.</p>
+<p>We shall work through the following steps:</p>
+<ol>
+  <li>Write a brief use case for the system we will build</li>
+  <li>Draw a class diagram of the business object model (using the UML design tool minUML)</li>
+  <li> Design the database schema, and document the mapping between objects and tables, properties and columns</li>
+  <li> Code the business object model</li>
+  <li> Write the SQL create script for the database</li>
+  <li> Look at alternative BOM &ndash; database mapping strategies:
+    <br>a) Hard code the SQL
+    <br>b) Use the tiSQLManager
+    <br>c) Auto generate the SQL
+  </li>
+  <li> Write the GUI and hook it up to the BOM</li>
+  <li> Modify the application so it will connect to different databases</li>
+</ol>
+<p>The order that we work through these steps shall be 1 to 5, then we will 
+implement one of the strategies in 6 so we can write the GUI in 7. We will 
+then return to 6 and implement the other two strategies before moving on to 8 
+where we will implement the swappable database connection layer.</p>
+<p>At the end of this chapter we will have build a contact management 
+application that will seamlessly connect to either Interbase using IBExpress, 
+Paradox using the BDE or Access using ADO.</p>
+<h2>Prerequisites</h2>
+<p>This chapter builds on the concepts introduced in chapters 2, 3 and 4 so 
+it will be a good idea to read these first. It also assumes that you have 
+installed the tiOPF, details of which are described in chapter 5.</p>
+<h2>Application design: The use case</h2>
+<p>There are two actors and two use cases in the system: Administrators who 
+are responsible for maintaining the contact list, and users who will be 
+searching for a contact by name. These actors may or may not be the same person 
+so a read only view will be necessary to prevent users from modifying data 
+that only administrators should have access to. A diagram representing this 
+is shown below:</p>
+<p> <img width="427" height="114" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image001.gif"> </p>
+<h2>Look and feel</h2>
+<p>The application will use a tree view on the left-hand side of the main form to browse and search for the contacts in the database. Initially, all the contacts will be loaded when the application starts, but we will probably want to change as the size of the database grows to provide database level searching.</p>
+<h2>Use case #1 Search for a contact</h2>
+<ol>
+  <li> Start the application and enough data about each entry in the database will load to allow a human to navigate.</li>
+  <li> Scroll down the tree view and click on the required person &ndash; the person&rsquo;s details will load and be shown on the right hand side of the application.</li>
+</ol>
+<h2>Use case #2 Maintain contacts</h2>
+<ol>
+  <li> Navigate to the contact to be changed as in use case #1, or click insert to add a new contact.</li>
+  <li> Navigate to the part of the contact to be maintained (e.g., name, and phone number, postal address) and make edits.</li>
+  <li> Click save button.</li>
+</ol>
+<h2>The class diagram</h2>
+<p>We shall implement the contact management application with 7 classes as shown in the class diagram below:</p>
+<p> <img width="576" height="246" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image001_0000.gif"> </p>
+<p> These classes have the following purposes:</p>
+<table cellspacing="0" cellpadding="0">
+  <tr class="Normal">
+    <td width="111" valign="top"><p><strong> Class </strong></p></td>
+    <td width="104" valign="top"><p><strong> Parent </strong></p></td>
+    <td width="369" valign="top"><p><strong> Description </strong></p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="111" valign="top"><p> TContactMgr</p></td>
+    <td width="104" valign="top"><p class="Normal"> TtiObject</p></td>
+    <td width="369" valign="top"><p> The top of the hierarchy. Initially, this class will just be a holder for an instance of TPeople, but later we may extend it to contain lookup list data, and perhaps an instance of TCompanies</p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="111" valign="top"><p> TPeople</p></td>
+    <td width="104" valign="top"><p> TtiObjectList</p></td>
+    <td width="369" valign="top"><p> A collection of TPeople</p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="111" valign="top"><p> TPerson</p></td>
+    <td width="104" valign="top"><p> TtiObject</p></td>
+    <td width="369" valign="top"><p> A person object owned by TPeople. Has published properties for LastName, FirstName, Title and Initials. Has a property of type TAdrsList and TEAdrsList.</p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="111" valign="top"><p> TAdrsList</p></td>
+    <td width="104" valign="top"><p> TtiObjectList</p></td>
+    <td width="369" valign="top"><p> A container for TAdrs objects</p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="111" valign="top"><p> TEAdrsList</p></td>
+    <td width="104" valign="top"><p> TtiObjectList</p></td>
+    <td width="369" valign="top"><p> A container for TEAdrs objects</p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="111" valign="top"><p> TAdrs</p></td>
+    <td width="104" valign="top"><p> TtiObject</p></td>
+    <td width="369" valign="top"><p> Holds a conventional street or post office box address. Has published properties AdrsType, lines, suburb, state, postcode and country.</p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="111" valign="top"><p> TEAdrs</p></td>
+    <td width="104" valign="top"><p> TtiObject</p></td>
+    <td width="369" valign="top"><p> An electronic address object that belong to the TPerson. Has properties Address type and address text.</p></td>
+  </tr>
+</table>
+<h2>The database schema &amp; object &ndash; database mapping</h2>
+<p>We shall store the data modelled by these seven classes in three tables in the database as shown in the table below:</p>
+<table cellspacing="0" cellpadding="0">
+  <tr class="Normal">
+    <td width="83" valign="top"><p><strong> Class </strong></p></td>
+    <td width="95" valign="top"><p><strong> Table </strong></p></td>
+    <td width="94" valign="top"><p><strong> Property </strong></p></td>
+    <td width="104" valign="top"><p><strong> Column </strong></p></td>
+    <td width="132" valign="top"><p><strong> Notes </strong></p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p> TPerson</p></td>
+    <td width="95" valign="top"><p> Person</p></td>
+    <td width="94" valign="top"><p> OID</p></td>
+    <td width="104" valign="top"><p> OID</p></td>
+    <td width="132" valign="top"><p> Primary key </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p>&nbsp; </p></td>
+    <td width="95" valign="top"><p>&nbsp; </p></td>
+    <td width="94" valign="top"><p> FirstName</p></td>
+    <td width="104" valign="top"><p> First_Name </p></td>
+    <td width="132" valign="top"><p>&nbsp; </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p>&nbsp; </p></td>
+    <td width="95" valign="top"><p>&nbsp; </p></td>
+    <td width="94" valign="top"><p> LastName</p></td>
+    <td width="104" valign="top"><p> Last_Name </p></td>
+    <td width="132" valign="top"><p>&nbsp; </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p>&nbsp; </p></td>
+    <td width="95" valign="top"><p>&nbsp; </p></td>
+    <td width="94" valign="top"><p> Title</p></td>
+    <td width="104" valign="top"><p> title </p></td>
+    <td width="132" valign="top"><p>&nbsp; </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p>&nbsp; </p></td>
+    <td width="95" valign="top"><p>&nbsp; </p></td>
+    <td width="94" valign="top"><p> Initials</p></td>
+    <td width="104" valign="top"><p> initials </p></td>
+    <td width="132" valign="top"><p>&nbsp; </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p>&nbsp; </p></td>
+    <td width="95" valign="top"><p>&nbsp; </p></td>
+    <td width="94" valign="top"><p> Notes</p></td>
+    <td width="104" valign="top"><p> notes </p></td>
+    <td width="132" valign="top"><p>&nbsp; </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p> TAdrs</p></td>
+    <td width="95" valign="top"><p> Adrs</p></td>
+    <td width="94" valign="top"><p> OID</p></td>
+    <td width="104" valign="top"><p> oid</p></td>
+    <td width="132" valign="top"><p> Primary key </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p>&nbsp; </p></td>
+    <td width="95" valign="top"><p>&nbsp; </p></td>
+    <td width="94" valign="top"><p> Owner.OID</p></td>
+    <td width="104" valign="top"><p> owner_oid </p></td>
+    <td width="132" valign="top"><p> Foreign key to Person </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p>&nbsp; </p></td>
+    <td width="95" valign="top"><p>&nbsp; </p></td>
+    <td width="94" valign="top"><p> AdrsType</p></td>
+    <td width="104" valign="top"><p> lines adrs_type </p></td>
+    <td width="132" valign="top"><p>&nbsp; </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p>&nbsp; </p></td>
+    <td width="95" valign="top"><p>&nbsp; </p></td>
+    <td width="94" valign="top"><p> Suburb</p></td>
+    <td width="104" valign="top"><p> suburb </p></td>
+    <td width="132" valign="top"><p>&nbsp; </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p>&nbsp; </p></td>
+    <td width="95" valign="top"><p>&nbsp; </p></td>
+    <td width="94" valign="top"><p> State</p></td>
+    <td width="104" valign="top"><p> state </p></td>
+    <td width="132" valign="top"><p>&nbsp; </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p>&nbsp; </p></td>
+    <td width="95" valign="top"><p>&nbsp; </p></td>
+    <td width="94" valign="top"><p> PCode</p></td>
+    <td width="104" valign="top"><p> pcode </p></td>
+    <td width="132" valign="top"><p>&nbsp; </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p>&nbsp; </p></td>
+    <td width="95" valign="top"><p>&nbsp; </p></td>
+    <td width="94" valign="top"><p> Country</p></td>
+    <td width="104" valign="top"><p> country </p></td>
+    <td width="132" valign="top"><p>&nbsp; </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p> TEAdrs</p></td>
+    <td width="95" valign="top"><p> EAdrs</p></td>
+    <td width="94" valign="top"><p> OID</p></td>
+    <td width="104" valign="top"><p> oid</p></td>
+    <td width="132" valign="top"><p> Primary key </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p>&nbsp; </p></td>
+    <td width="95" valign="top"><p>&nbsp; </p></td>
+    <td width="94" valign="top"><p> Owner.OID</p></td>
+    <td width="104" valign="top"><p> owner_oid </p></td>
+    <td width="132" valign="top"><p> Foreign key to Person </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p>&nbsp; </p></td>
+    <td width="95" valign="top"><p>&nbsp; </p></td>
+    <td width="94" valign="top"><p> EAdrsType</p></td>
+    <td width="104" valign="top"><p> eadrs_type </p></td>
+    <td width="132" valign="top"><p>&nbsp; </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="83" valign="top"><p>&nbsp; </p></td>
+    <td width="95" valign="top"><p>&nbsp; </p></td>
+    <td width="94" valign="top"><p> Text</p></td>
+    <td width="104" valign="top"><p> text </p></td>
+    <td width="132" valign="top"><p>&nbsp; </p></td>
+  </tr>
+</table>
+<h2>A note about OIDs</h2>
+<p>The framework supports several methods of Object Identifier (OID) generation. Earlier versions of the framework used integers (which is what we will be using here), but there is additional support for HEX and GUID OIDs. If none of these are suitable, you can easily write your own by descending a new TOID descendent class defined in tiObject.pas. Remember to make your OID table in your database match the storage requirements of OID. You must remember to Use the appropriate OID class generation unit in your BOM otherwise you will get a runtime error message &ldquo;Attempt to create unregistered OID class&rdquo;. Likewise, you must also remember to include one and only one OID class generation unit.</p>
+<h2>Application construction</h2>
+<p>If you have not installed the tiOPF components, and setup the search path to give access to the tiOPF files, then do this now following the instructions under &lsquo;Installing the tiOPF&rsquo;</p>
+<h2>Create a new application</h2>
+<p>Create a directory to place the application source, and then create a Delphi project group called ContactMgr_PG and save it.</p>
+<p>Add the Delphi packages tiPersist.dpk and tiPersistIBX.dpk (because we are starting by building an Interbase application with IBX) found in the \TechInsite\tiPersist directory.</p>
+<p>Add a new Delphi project. Call the main form FormMain, and save its pas file as FMain.pas. Call the application ContactMgr.dpr</p>
+<p>Arrange the projects in the project tree in the order of tiPersistCore, tiPersistIBX then ContactMgr. This is important because of the dependencies between the three projects. At the end of this, you will probably have a project tree that looks something like this:</p>
+<p> <img width="332" height="165" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image001_0001.gif"> </p>
+<p>I find the project tree provides a very hand way of navigating aroudn the framework files. If I can&rsquo;t remember a unit or class name, I can double click on tiPersistCore and navigate all the units and classes in the package editor that pops up.<br>
+  I like to have control over the directory that Delphi puts its output files, so go to Project Options and select the Directories/Conditionals tab. Check that the Directories/Conditionals settings of tiPersistCore and tiPersistIBX looks like this:</p>
+<p> <img width="424" height="399" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image001_0002.gif"> </p>
+<p>Note that we want to set the &lsquo;Output directory&rsquo;, &lsquo;Unit output directory&rsquo; and &lsquo;DCP output directory&rsquo;. The location of the binaries and DCP files are the most important because we will have to reference these files in the application and will want to know where to look.</p>
+<p>Set the &lsquo;Output directory&rsquo; of the ContactMgr application to C:\TechInsite\Bin. It is important that this is the same directory the package BPL files will be placed in because the ContactMgr application will look for the persistence layer it is to load in the same directory as its executable.</p>
+<p>Select Project | Build all projects (I set-up a speed button for this because I build all projects quite a bit), then run the ContactMgr and check the files have been output to the directories we expect.</p>
+<p>Note, we really want to know where the BPL files are being placed. Delphi will put them in the \Delphi\Bin directory by default. If you have two copies of the same BPL on the search path, and Delphi is not loading the copy you think it is, it can cost you hours of unnecessary debugging (this one still catches me out sometimes).</p>
+<h2>Code the business object model</h2>
+<h2>Setting up the pas files</h2>
+<p>Add a new unit to the project and save it under the name ContactMgr_BOM.pas. The root of the name is not important, but the _BOM bit is. We will be creating a family of three units with the names *_BOM,.pas, *_Cli.pas and *_Srv.pas to hold the business object model, server side visitors and client side single instance of the BOM</p>
+<p>We have seven classes to create (TContactMgr, TPeople, TPerson, TAdrsList, TEAdrsList, TAdrs, and TEAdrs) and will create them one at the time, then populate them with some hard coded data. We will use tiShowPerObjAbs to look inside the objects as we are building them to confirm the structure is working as expected.</p>
+<p>Load ContactMgr_BOM.pas in the editor and add tiVisitor to the uses clause. Add the class declaration for TContactMgr like this:<br>
+</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+unit ContactMgr_BOM;
+interface
+uses
+  tiVisitor,
+  tiOID,
+  tiOIDInteger,
+  ;
+
+type
+  TContactMgr = class(TtiObject)
+  
+implementation
+
+end.
+</textarea>
+
+<h2>Setting up some code templates</h2>
+<p>Ctrl+Left Click TtiObject and you will be taken to its declaration. Directly above the declaration of TtiObject, there are two stubs of code (in comments) which you can paste into ContactMgr_BOM to help get started when writing the interface of TtiObject and TtiObjectList descendants.</p>
+<p>I usually make two entries in Delphi's Code Insight to speed the process of creating TtiObject and TtiObjectList descendants. I add the following blocks of code:</p>
+<p>TtiObjectList code stub. Code Insight Shortcut name: pol</p>
+
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+TMyClasses = class(TtiObjectList)
+private
+protected
+  function  GetItems(i: integer): TMyClass; reintroduce;
+  procedure SetItems(i: integer; const Value: TMyClass); reintroduce;
+  function  GetOwner: TMyClasses; reintroduce;
+  procedure SetOwner(const Value: TMyClasses); reintroduce;
+public
+  property  Items[i:integer]: TMyClass read GetItems write SetItems;
+  procedure Add(AObject:TMyClass); reintroduce;
+  property  Owner: TMyClass read GetOwner write SetOwner;
+published
+end;
+</textarea>
+
+<p>TtiObject code stub. Code Insight Shortcut name: poa</p>
+
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+TMyClass = class(TtiObject)
+private
+protected
+  function  GetOwner: TMyClasses; reintroduce;
+  procedure SetOwner(const Value: TMyClasses); reintroduce;
+public
+  property  Owner: TMyClasses read GetOwner write SetOwner;
+end;
+</textarea>
+
+<h2>Coding TContactMgr, TPeople and TPerson classes</h2>
+<p>We will code these three classes together, and then populate the object model with some data that is hard coded to test the framework.</p>
+<p>Paste in code templates for TContactMgr (based on TtiObject), TPeople (based on TtiObjectList) and TPerson (based on TtiObject). Write forward declarations of the three classes, and then add an owned instance of TPeople to TContactMgr so the interface looks like this:</p>
+
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+TContactMgr = class;
+TPeople = class;
+TPerson = class;
+
+TContactMgr = class(TtiObject)
+private
+  FPeople: TPeople;
+protected
+  function    GetCaption: string; override;
+public
+  constructor Create; override;
+  destructor  Destroy; override;
+published
+  property    People: TPeople read FPeople;
+end;
+</textarea>
+
+<p>The constructor and destructor manage the creation and destruction of the owned instance of TPeople. Note that the property, People, is published so the automatic iteration code that we developed in the TVisited class will detect the owned class and pass the visitor over each node. We have also added the overridden function GetCaption where simply return the string &lsquo;Contact manager&rsquo; in the implementation. This will become useful when we start building the GUI using the TtiTreeView.</p>
+<p>Paste in a code stub for TPeople by copying the TtiObjectList template. Change the type of its Owner, and Items properties and modify the signature of their get and set methods. So Owner is of type TContactMgr and Items is of type TPerson. When you have finished, the interface of TPeople should look like this:</p>
+
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+TPeople = class(TtiObjectList)
+private
+protected
+  function  GetItems(i: integer): TPerson; reintroduce;
+  procedure SetItems(i: integer; const Value: TPerson); reintroduce;
+  function  GetOwner: TContactMgr; reintroduce;
+  procedure SetOwner(const Value: TContactMgr); reintroduce;
+public
+  property  Items[i:integer]: TPerson read GetItems write SetItems;
+  procedure Add(AObject: TPerson); reintroduce;
+  property  Owner: TContactMgr read GetOwner write SetOwner;
+published
+end;
+</textarea>
+
+<p>Hit Ctrl+Shift+C and Delphi will fill out the implementation of TPeople. You how have to hand craft the code for GetItems, SetItem, GetOwner, SetOwner and Add. This takes no time at all because I have Code Insight templates set-up for each of these called igi (inherited GetItems), isi (inherited SetItems), igo, iso and ia.</p>
+<p>The finished implementation of TPeople looks like this:</p>
+
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+{ TPeople }
+
+procedure TPeople.Add(AObject: TPerson);
+begin
+  inherited Add(AObject);
+end;
+
+function TPeople.GetItems(i: integer): TPerson;
+begin
+  result := TPerson(inherited GetItems(i));
+end;
+
+function TPeople.GetOwner: TContactMgr;
+begin
+  result := TContactMgr(inherited GetOwner);
+end;
+
+procedure TPeople.SetItems(i: integer; const Value: TPerson);
+begin
+  inherited SetItems(i, Value);
+end;
+
+procedure TPeople.SetOwner(const Value: TContactMgr);
+begin
+  inherited SetOwner(Value);
+end;
+</textarea>
+
+<p>And the finished implementation of TPerson looks like this:</p>
+
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+{ TPerson }
+
+function TPerson.GetOwner: TPeople;
+begin
+  result := TPeople(inherited GetOwner);
+end;
+
+procedure TPerson.SetOwner(const Value: TPeople);
+begin
+  inherited SetOwner(Value);
+end;
+</textarea>
+
+<p>This takes very little time to had code with the help of Code Insight, however it would be still quicker with the help of a wizard, or a UML tool to output the Delphi code. We will add this functionality to the tiOPF one day in the future.)</p>
+<p>Next, add the properties LastName, FirstName, Title, Initials and notes to TPerson. Hit Ctrl+Shift+C and Delphi will finish off the interface declaration. The interface of TPerson now looks like this:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+TPerson = class(TtiObject)
+private
+  FTitle: string;
+  FFirstName: string;
+  FInitials: string;
+  FLastName: string;
+  FNotes: string;
+protected
+  function  GetOwner: TPeople; reintroduce;
+  procedure SetOwner(const Value: TPeople); reintroduce;
+public
+  property  Owner: TPeople read GetOwner write SetOwner;
+published
+  property  LastName: string read FLastName write FLastName;
+  property  FirstName: string read FFirstName write FFirstName;
+  property  Title: string read FTitle write FTitle;
+  property  Initials: string read FInitials write FInitials;
+  property  Notes: string read FNotes write FNotes;
+end;
+</textarea>
+<h2>Testing TContactMgr, TPeople and TPerson classes</h2>
+<p>We shall now create a single instance of TContactMgr, populate it with some test data by hard coding. The question is, where shall the instance be created? Who shall be responsible for creating it? And who shall be responsible for freeing it?</p>
+<p>I usually choose from one of three strategies:</p>
+<ol>
+  <li>Create is as an application wide, globally visible Singleton. This is a useful technique when you are working with background data that can be shared between objects, or when you are creating a single form application like the one we are working on here.</li>
+  <li> Create it as an owned property of some sort of manager class. This technique is good if there will be 0..n instances of the class, and you want to create them on demand and share them between client classes once they have been created.</li>
+  <li> Create it and free it in a form Create and free it in the constructor and destructor of the class that it will interact with (often an application&rsquo;s form, or main form). This is good for MDI applications when you might want several forms all editing the same class of object, but populated with different data.</li>
+</ol>
+<p>We shall create the TContactMgr class as a Singleton because we are working with a single form application and it makes it easier to abstract persistence code away from the GUI.</p>
+<p>Create a unit called ContactMgr_Cli.pas, and add the following code:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+unit ContactMgr_Cli;
+interface
+uses
+  ContactMgr_BOM
+  ;
+// We hide a variable with unit wide scope behind a function.
+function gContactMgr: TContactMgr;
+implementation
+var
+  uContactMgr: TContactMgr;
+  
+// Fakes some of the behaviour expected of a Singleton
+function gContactMgr: TContactMgr;
+begin
+  // If uContactMgr has not been created, then create one.
+  if uContactMgr = nil then
+    uContactMgr := TContactMgr.Create;
+  result := uContactMgr;
+end;
+
+initialization
+finalization
+  uContactMgr.Free;
+end.
+</textarea>
+<p>This fakes some of the behaviour expected from a Singleton. This technique will allow the singleton to be deleted, which is technically not permitted. It will also allow more than one instance of TContactMgr to be created which also violates the rules of a pure Singleton. The technique is, however, quick to code and easy to understand which is not the case for a pure GoF Singleton when implemented in Delphi.</p>
+<p>Now, add the unit tiDialogs to the uses clause of the Implementation section of the main unit then drop a button on the application&rsquo;s main form. Add the following code to the button&rsquo;s OnClick event handler:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+procedure TFormMain.Button1Click(Sender: TObject);
+begin
+  tiShowString(gContactMgr.AsDebugString);
+end;
+</textarea>
+<p>This will output the contents of the empty to TContactMgr to a popup dialog like this:</p>
+<p> <img width="412" height="96" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image001_0003.gif"> </p>
+<p>We will now populate TContactMgr with some hard coded data so create another unit called ContactMgr_TST.pas (TST stands for test) and add the following code:</p>
+
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+unit ContactMgr_TST;
+interface
+uses
+  ContactMgr_BOM
+  ;
+  
+procedure PopulateContactMgr(pContactMgr: TContactMgr);
+
+implementation
+
+procedure PopulateContactMgr(pContactMgr: TContactMgr);
+var
+  lPerson : TPerson;
+begin
+  lPerson := TPerson.Create;
+  lPerson.LastName    := 'Hinrichsen';
+  lPerson.FirstName   := 'Peter';
+  lPerson.Title       := 'Mr';
+  lPerson.Initials    := 'P.W.';
+  lPerson.Notes       := 'Founder of the tiOPF project';
+  pContactMgr.People.Add(lPerson);
+end;
+</textarea>
+<p>This will populate the contact manager with yours truly.</p>
+<p>We have to add a call to PopulateContactMgr somewhere in application and as we are going down the singleton route for the creation of the TContactMgr, we can add the code there:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+function gContactMgr: TContactMgr;
+begin
+  // If uContactMgr has not been created, then create one.
+  if uContactMgr = nil then
+  begin
+    uContactMgr := TContactMgr.Create;
+    PopulateContactMgr(uContactMgr);
+  end;
+  result := uContactMgr;
+end;
+</textarea>
+<p>This is what we are wanting so we can go on and create the remaining four classes.</p>
+<h2>Coding TAdrsList, TEAdrsList, TAdrs and TEAdrs</h2>
+<p>We shall not code the four classes TAdrsList, TEAdrsList, TAdrs and TEAdrs. There is a common property shared between TAdrs and TEAdrs called AdrsType, so we will create an abstract address class to provide this common behaviour, and descend both TAdrs and TEAdrs form this abstract class.</p>
+<p>First, the interface of TPerson is extended with an owned instance of TAdrsList and TEAdrsList. These list classes are surfaced as published properties so they will be automatically detected by the iteration routine in the TVisited class. The interface extended interface of TPerson is shown below:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+TPerson = class(TtiObject)
+private
+  FAdrsList: TAdrsList;
+  FEAdrsList: TEAdrsList;
+protected
+  function    GetCaption: string; override;
+public
+  constructor Create; override;
+  destructor  Destroy; override;
+published
+  property    AdrsList: TAdrsList read FAdrsList;
+  property    EAdrsList: TEAdrsList read FEAdrsList;
+end;
+</textarea>
+<p>The implementation of TPerson is as you would expect with an instance of 
+TAdrsList and TEAdrsList being created and destroyed in the constructor and 
+destructor. There are four extra lines of code however where the owner 
+relationship between TAdrsList, TEAdrsList, their list elements and the 
+TPerson are set. In the implementation of GetCaption, we will return the 
+string FirstName + &lsquo; &rsquo; + LastName.</p>
+<p>Now, from deep in the hierarchy, at say the TAdrs level, we want to be 
+able to chain up the object hierarchy like this to get the owning person 
+like this:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+lPerson := lAdrs.Owner.Owner;
+</textarea>
+<p>But with the TAdrs and TEAdrsList classes the way we would build them by 
+default, the owner of a TAdrs is its TAdrsList. We really want the owner 
+property of a TAdrs to reference the TPerson object like this:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+lPerson := lAdrs.Owner;
+</textarea>
+<p>This is achieved by setting the ItemOwner property of the TAdrsList and 
+TEAdrsList objects like this:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+constructor TPerson.Create;
+begin
+  inherited;
+  FAdrsList := TAdrsList.Create;
+  FAdrsList.Owner     := self;
+  FAdrsList.ItemOwner := self;
+  FEAdrsList := TEAdrsList.Create;
+  FEAdrsList.Owner    := self;
+  FAdrsList.ItemOwner := self;
+end;
+</textarea>
+<p>This can be a little confusing. The owner of a TAdrs, from the point of 
+view of the class being responsible for freeing the TAdrs is the TAdrsList. 
+The owner of the TAdrs when TAdrs.Owner is called is the TPerson class, which 
+is much more useful when traversing the object hierarchy. This is all taken 
+care of in the TtiObject.Add method.</p>
+<p>Next, we create the interface and implementation of TAdrsListAbs, 
+TAdrsList and TEAdrsList. These consist of new implementations of the 
+methods GetItems, SetItems, GetOwner, SetOwner and Add with the compiler 
+warnings being suppressed by using the reintroduce key word. The type of 
+the property Items has also been changed. By changing the type of these 
+properties, along with their get and set methods we firm up the relationship 
+between the collection class and the objects that it holds. This takes a bit 
+of extra work up front, but we will be more than compensated in saved 
+development, debugging and maintenance time. The interface of TAdrsList 
+is shown below:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+TAdrsListAbs = class(TtiObjectList)
+protected
+  function  GetOwner: TPerson; reintroduce;
+  procedure SetOwner(const Value: TPerson); reintroduce;
+public
+  property  Owner: TPerson read GetOwner write SetOwner;
+end;
+
+TAdrsList = class(TAdrsListAbs)
+private
+protected
+  function  GetItems(i: integer): TAdrs; reintroduce;
+  procedure SetItems(i: integer; const Value: TAdrs); reintroduce;
+public
+  property  Items[i:integer]: TAdrs read GetItems write SetItems;
+  procedure Add(AObject: TAdrs); reintroduce;
+published
+end;
+</textarea>
+<p>The interface of TAdrsList is not shown, but as you would expect, it 
+follows the same pattern as TPeople with each of the Get and Set methods 
+simply calling inherited with some type casting as necessary. The interface 
+and implementation of TEAdrsList follows the same pattern as in TAdrsList 
+with the methods each calling inherited with the appropriate types casting.</p>
+<p>TAdrs and TEAdrs both descend from the common parent TAdrsAbs because the 
+have the property AdrsType in common. The interface of TAdrsAbs is shown 
+below:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+TAdrsAbs = class(TtiObject)
+private
+  FAdrsType: string;
+published
+  property AdrsType: string read FAdrsType write FAdrsType;
+end;
+</textarea>
+<p>In TAdrs, the type of the Owner property is changed to TPerson along 
+with the corresponding Get and Set methods. The properties Lines, Suburb, 
+PCode, State, and country are also added. The interface of TAdrs is shown 
+below:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+TAdrs = class(TAdrsAbs)
+private
+  FCountry: string;
+  FSuburb: string;
+  FLines: string;
+  FPCode: string;
+  FState: string;
+protected
+  function  GetCaption: string; override; 
+  function  GetOwner: TAdrsList; reintroduce;
+  procedure SetOwner(const Value: TAdrsList); reintroduce;
+  property  Owner: TAdrsList read GetOwner write SetOwner;
+published
+  property  Lines: string read FLines write FLines;
+  property  Suburb: string read FSuburb write FSuburb;
+  property  State: string read FState write FState;
+  property  PCode: string read FPCode write FPCode;
+  property  Country: string read FCountry write FCountry;
+end;
+</textarea>
+<p>You will now need to add the tiUtils unit to ContactMgr_BOM&rsquo;s uses 
+clause, as this is where the tiStrTran function can be found. The 
+implementation of GetCaption creates a single line view of the address and 
+is shown below:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+function TAdrs.GetCaption: string;
+begin
+  result :=
+    tiStrTran( tiStrTran( Lines, Cr, ' ' ), Lf, '' ) +
+    ' ' + Suburb + ' ' + State + ' ' + PCode + ' ' +
+    Country ;
+end;
+</textarea>
+<p>The interface of TEAdrs is the same as TAdrs except that the properties 
+Lines, Suburb, etc are replaced with a single property called Text.</p>
+<p>We can extend the PopulateContactMgr routine found in ContactMgr_TST.pas 
+by creating instances of TAdrs and TEAdrs. This code looks like this:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+procedure PopulateContactMgr(pContactMgr: TContactMgr);
+var
+  lPerson: TPerson;
+  lAdrs: TAdrs;
+  lEAdrs: TEAdrs;
+begin
+  lPerson := TPerson.Create;
+  lPerson.LastName   := 'Hinrichsen';
+  lPerson.FirstName  := 'Peter';
+  lPerson.Title      := 'Mr';
+  lPerson.Initials   := 'P.W.';
+  lPerson.Notes      := 'Founder of the tiOPF project';
+  pContactMgr.People.Add(lPerson);
+  lAdrs := TAdrs.Create;
+  lAdrs.AdrsType  := 'Street';
+  lAdrs.Lines     := '23 Victoria Pde.';
+  lAdrs.Suburb    := 'Collingwood';
+  lAdrs.PCode     := '3066';
+  lAdrs.State     := 'VIC';
+  lAdrs.Country   := 'Australia';
+  lPerson.AdrsList.Add(lAdrs);
+  lAdrs := TAdrs.Create;
+  lAdrs.AdrsType  := 'Postal';
+  lAdrs.Lines     := 'PO Box 429';
+  lAdrs.Suburb    := 'Abbotsford';
+  lAdrs.PCode     := '3067';
+  lAdrs.State     := 'VIC';
+  lAdrs.Country   := 'Australia';
+  lPerson.AdrsList.Add(lAdrs);
+  lEAdrs := TEAdrs.Create;
+  lEAdrs.AdrsType := 'EMail';
+  lEAdrs.Text     := 'peter_hinrichsen@dontspamme.com';
+  lPerson.EAdrsList.Add(lEAdrs);
+  lEAdrs := TEAdrs.Create;
+  lEAdrs.AdrsType := 'Mobile';
+  lEAdrs.Text     := '0418 108 353';
+  lPerson.EAdrsList.Add(lEAdrs);
+  lEAdrs := TEAdrs.Create;
+  lEAdrs.AdrsType := 'Fax';
+  lEAdrs.Text     := '+61 3 9419 1682';
+  lPerson.EAdrsList.Add(lEAdrs);
+end;
+</textarea>
+<p>When we run the application and click the button with the tiShowString() 
+call, as expected we get the following dialog:</p>
+<p> <img width="300" height="399" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image002.jpg"> </p>
+<p>This completes our work with the business object model, so next we can 
+set up the GUI to display the data using a combination of the TtiTreeView, 
+TtiListView and TtiPerAware controls.</p>
+<h2>Setup the GUI to display the object hierarchy</h2>
+<h2>Set-up the main form</h2>
+<p>Add a TToolBar, TActionList, TMainMenu, TStatusBar and TImageList to 
+the form. Name the TToolBar TB, the TMainMenu MM, the TStatusBar SB, and 
+the TImageList to ILButtons (we will eventually have 2 image lists on this 
+form). Set the TToolBar&rsquo;s Flat property to true, and change its height 
+to 25. Add four buttons and two separators to the toolbar, positioning the 
+separators before the 3rd and 4th buttons. Now, add a Close menu item to the 
+File menu, and New, Delete and Save menu items to the Edit option of the 
+main menu you added. We will hook up the appropriate actions in a moment.<p>
+<p>Double click the image list and add the New, Delete, Save and Cancel 
+images from the \TechInsite\Images\Buttons directory. Arrange the images 
+in order as shown below:</p>
+<p> <img width="331" height="218" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image002_0000.jpg"> </p>
+<p>Double click the Action list and add four actions: aNew, aDelete, 
+aSave and aClose. Setup their captions to read &amp;New, &amp;Delete, &amp;Save 
+and &amp;Close, with their shortcuts being Ins, Del, Ctrl+S and Alt+F4. Note, 
+that we can&rsquo;t actually assign Alt+F4 as a shortcut key from the 
+Object Inspector; we must do this by writing the following piece of code 
+in the main form&rsquo;s FormCreate event handler:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+Procedure TFormMain.FormCreate(Sender: TObject);
+Begin
+  aClose.ShortCut := ShortCut(VK_F4, [ssAlt]);
+End;
+</textarea>
+<p>The Shortcut function is defined in the Menus unit, so don&rsquo;t forget 
+to add this to the uses clause, or your code will not compile.</p>
+<p>Assign the image index properties of each action to match its image index 
+in the image list. Set the Hint properties to &lsquo;New&rsquo;, &lsquo;Delete&rsquo;, 
+&lsquo;Save&rsquo; and &lsquo;Close&rsquo;. Double click each action and 
+create an OnClick event handler. Wire up the actions to the tool buttons 
+and main menu items so the form looks like the one shown below. Run and 
+test.</p>
+<p>Add the single command Close to the aCloseExecute event (to close the 
+form and shut down the application.)</p>
+<p> <img width="302" height="142" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image001_0004.gif"> </p>
+<h2>Add a TtiTreeView</h2>
+<p>Go to the TechInsite tab on the component pallet and add a TtiTreeView, 
+which we shall name TV. Set its HasChildForms property to true, and 
+SplitterVisible property to true. You can set it&rsquo;s align property 
+to alClient, but I prefer to do this in the form&rsquo;s constructor 
+because is leaves the form less cluttered at design time.</p>
+<p>While we are in the form&rsquo;s constructor, set the tree view&rsquo;s 
+Data property to point to the single instance of the TContactMgr. The 
+form&rsquo;s constructor will look like this:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+procedure TFormMain.FormCreate(Sender: TObject);
+begin
+  aClose.ShortCut := ShortCut(VK_F4, [ssAlt]);
+  TV.Align        := alClient;
+  TV.SplitterPos  := 110;
+  TV.Data         := gContactMgr;
+end;
+</textarea>
+<p>Next, we will configure the tree view to display the necessary nodes of 
+the object hierarchy, and hide the nodes we do not want to display. Click on 
+the tree view&rsquo;s DataMappings property and add three mappings to the 
+collection editor. Set the mappings DataClass properties to TContactMgr, 
+TPeople and TPerson. You will end up with a collection editor that looks 
+like this:</p>
+<p> <img width="223" height="126" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image001_0005.gif"> </p>
+<p>Run the application and you should see a tree view displaying the three 
+levels of the contact manager class hierarchy: TContactMgr, TPeople and 
+TPerson as shown below:</p>
+<p> <img width="302" height="148" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image002_0001.jpg"></p>
+<p>Next, we shall add a form to display the details of the TPerson on the 
+right hand side of the tree view.</p>
+<h2>Add a form to display the currently selected node on the TtiTreeView</h2>
+<p>Add a new form to the project and save it with the file name 
+FContactMgr_Person. (Make sure that it is not added to the projects list 
+of auto create forms.) Give the form the name FormContactMgrPerson then 
+add two TtiSplitterPanel(s), one inside the other, and three TLabel(s) 
+to the form. Arrange the as shown below and set their Anchors properties 
+so the panels resize as expected when the form is resized. (Note, you can 
+change the properties of the TtiSplitterPanel by double clicking.)</p>
+<p><img width="272" height="238" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image001_0006.gif"></p>
+<p>The TtiTreeView can have a form associated with each data type it will 
+display. When a node is selected, if it is registered against a form the 
+form will be shown to the right hand side of the tree view. The tree view 
+controls the form using RTTI so it must have a standard interface as shown 
+in the code stub below, which can be found in the unit tiTreeView.pas.</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+{
+// This stub of code defines the interface a child form
+// must have if it is to be displayed as in the right
+// hand pane of the TtiTreeView
+TMyChildForm = class(TForm)
+private
+  FData: TPersistent; // Can be any TPersistent descendant
+  FTreeNode: TTreeNode;
+  function  GetValid: boolean;
+  procedure SetData(const Value: TPersistent);
+published
+  property  Data: TPersistent read FData write SetData;
+  property  Valid: boolean read GetValid;
+  property  TreeNode: TTreeNode read FTreeNode write FTreeNode;
+public
+end;
+}
+</textarea>
+<p>Paste this code into the interface section of the newly create form and 
+change the type of FData from TPersistent to TPerson. Add ContactMgr_BOM 
+and ComCtlrs to the unit&rsquo;s uses clause then press Ctlr+Shift+C so 
+Delphi will create the implementation of the unit. (ComCtrls.pas is required 
+because we have added a reference to a TTreeNode, which is defined in this 
+unit.)</p>
+<p>Add a TtiSplitterPanel to the form so we will be able to identify if when 
+it is displayed by the tree view. Arrange the TtiSplitterPanel so its sides 
+are about 8 pixels in from each edge, and then set its top, left, bottom and 
+right anchors to true. Double click the TtiSplitterPanel and set its 
+SplitterAlignment property to horizontal. Next, add a stub of implementation 
+to the SetData and Valid methods as shown below:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+function TFormContactMgrPerson.GetValid: boolean;
+begin
+  result := true;
+end;
+
+procedure TFormContactMgrPerson.SetData(const Value: TPerson);
+begin
+  FData := Value;
+end;
+</textarea>
+<p>Go to the application&'s main form and in the OnCreate event, add the 
+line: TV.RegisterChildForm( TPerson, TFormContactMgrPerson ). This will 
+associate the form we have just created with the TPerson class. The 
+implementation of TformMain.OnCreate now looks like this:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+procedure TFormMain.FormCreate(Sender: TObject);
+begin
+  aClose.ShortCut := ShortCut(VK_F4, [ssAlt]);
+  TV.Align        := alClient;
+  TV.SplitterPos  := 110;
+  // This line associates the TPerson class with
+  // TFormContactMgrPerson for display and editing
+  TV.RegisterChildForm(TPerson, TFormContactMgrPerson);
+  TV.Data := gContactMgr;
+end;
+</textarea>
+<p>Add FContactMgr_Person and ContactMgr_BOM to the main form&rsquo;s uses clause then compile and test the application; you should see the form we created appear when a TPerson is selected. There should be no form visible on the right hand side of the tree view when a node that is not a TPerson is selected. The application should look this when it is running:</p>
+<p><img width="341" height="247" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image002_0002.jpg"></p>
+<p>Next we will add some TPersistent aware controls to display the data associated with a TPerson.</p>
+<h2>Setup a form to display all the details of a TPerson</h2>
+<p>We must display five 'flat' properties including FirstName, LastName, Initials, Title and Notes. We will display the firs three with TtiPerAwareEdit controls, the title with a TtiPerAwareComboBox and Notes with a TtiPerAwareMemo. Add these controls to the form, then go to the SetData method and connect up the controls to the data property like this:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+procedure TFormContactMgrPerson.SetData(const Value: TPerson);
+begin
+  FData := Value;
+  paeFirstName.LinkToData(FData, 'FirstName');
+  paeLastName.LinkToData(FData, 'LastName');
+  paeInitials.LinkToData(FData, 'Initials');
+  paeTitle.LinkToData(FData, 'Title');
+  paeNotes.LinkToData(FData, 'Notes');
+end;
+</textarea>
+<p>Run the application and when you select a person note in the tree view, you should see this:</p>
+<p><img width="408" height="258" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image002_0003.jpg"></p>
+<p>The next step is to add two TtiListView(s) and connect them up to display the TAdrs(s) and TEAdrs(s). Add the TtiListView(s) and call them lvAdrs and lvEAdrs. Set their all their anchors properties to true connect them up to the TPerson in the SetData method like this:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+procedure TFormContactMgrPerson.SetData(const Value: TPerson);
+begin
+  // Snip
+  if FData = nil then
+  begin
+    lvAdrs.Data  := nil;
+    lvEAdrs.Data := nil;
+    Exit; //==&gt;
+  end ;
+  lvAdrs.Data  := FData.AdrsList.List;
+  lvEAdrs.Data := FData.EAdrsList.List;
+end;
+</textarea>
+<p>Select lvEAdrs and click the ListColumns property in the property editor. The ListColumn collection editor will open. Add two collection items and set their FieldName and DisplayLabel properties as below:</p>
+<table cellspacing="0" cellpadding="0">
+  <tr class="Normal">
+    <td width="127" valign="top"><p align="center"><strong> Collection Item </strong></p></td>
+    <td width="108" valign="top"><p><strong> Field Name </strong></p></td>
+    <td width="138" valign="top"><p><strong> Display Label </strong></p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="127" valign="top"><p align="center"> 0 </p></td>
+    <td width="108" valign="top"><p> AdrsType </p></td>
+    <td width="138" valign="top"><p> Address type </p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="127" valign="top"><p align="center"> 1 </p></td>
+    <td width="108" valign="top"><p> Caption </p></td>
+    <td width="138" valign="top"><p> Text </p></td>
+  </tr>
+</table>
+<p>The collection editor for the ListColumns property, along with the property editor for collection item 0 are shown below:</p>
+<p> <img width="372" height="193" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image001_0007.gif"> </p>
+<p>Repeat the process for lvAdrs and enter the values shown below:</p>
+<p><img width="426" height="293" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image002_0004.jpg"></p>
+<p>Now that we have created the BOM, and build a GUI to display the data, we can create an Interbase database to save the objects to, and then write the Visitors to manage the mapping of objects to tables and properties to columns. After that, we will add edit and delete features to the GUI, and implement Visitors to save the objects.</p>
+<h2>Write the SQL create script for the database</h2>
+<p>In the section on database schema and object - database mapping, we identified three persistent objects that require three tables to store their information. Remind yourself of the way we decided to map objects to tables and properties to columns. The SQL schema to implement this will be written next, but first we must create an Interbase database, and then connect to it using a tool for running adhoc SQL statements.</p>
+<h2>Create the Interbase database</h2>
+<p>Make sure the Interbase server is running, and then load WinISQL (or what ever tool you prefer for creating an Interbase database) the dialog to create a database in WinISQL is shown below:</p>
+<p><img width="209" height="270" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image002_0005.jpg"></p>
+<p>This will create an Interbase database called ContactMgr.gdb in the directory C:\ContactMgr\</p>
+<h2>Compile the tiSQLEditor</h2>
+<p>Add the application C:\TechInsite\SupportApps\tiSQLManager\tiSQLEditor.dpr to the project group. Check the command line parameters are entered as shown below:</p>
+<p><img width="354" height="220" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image002_0006.jpg"></p>
+<p> The command line parameters have the following meanings:</p>
+<table cellspacing="0" cellpadding="0">
+  <tr class="Normal">
+    <td width="121" valign="top"><p align="center"><strong> Parameter switch </strong></p></td>
+    <td width="198" valign="top"><p><strong> Value </strong></p></td>
+    <td width="150" valign="top"><p><strong> Meaning </strong></p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="121" valign="top"><p align="center"> -pl</p></td>
+    <td width="198" valign="top"><p> IBX</p></td>
+    <td width="150" valign="top"><p> Persistence layer name</p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="121" valign="top"><p align="center"> -d</p></td>
+    <td width="198" valign="top"><p> C:\ContactMgr\ContactMgr.gdb</p></td>
+    <td width="150" valign="top"><p> Database name</p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="121" valign="top"><p align="center"> -u</p></td>
+    <td width="198" valign="top"><p> SYSDBA</p></td>
+    <td width="150" valign="top"><p> User name</p></td>
+  </tr>
+  <tr class="Normal">
+    <td width="121" valign="top"><p align="center"> -p</p></td>
+    <td width="198" valign="top"><p> masterkey</p></td>
+    <td width="150" valign="top"><p> Password</p></td>
+  </tr>
+</table>
+<p> The tiSQLEditor window should show like the one shown below:</p>
+<p> <img width="402" height="285" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image002_0008.jpg"> </p>
+<p>Enter the SQL create script shown below, then save it to C:\ContactMgr\ContactMgr_DDL.SQL</p>
+<textarea name="code" class="sql:nogutter:nocontrols" rows="20" cols="75">
+/*****************************************************************
+  Create the contact manager database
+*/
+
+create table Next_OID
+  ( oid integer not null);
+
+create table Person
+( oid integer not null,
+  First_Name varchar( 60 ),
+  Last_Name varchar( 60 ),
+  title varchar( 10 ),
+  initials varchar( 10 ),
+  notes varchar( 256 ),
+  primary key ( oid )) ;
+
+create table adrs
+( oid integer not null,
+  owner_oid integer not null,
+  adrs_type varchar( 20 ),
+  lines varchar( 180 ),
+  suburb varchar( 30 ),
+  state varchar( 30 ),
+  pcode varchar( 20 ),
+  country varchar( 30 ),
+  primary key( oid )) ;
+
+alter table adrs
+  add foreign key ( owner_oid ) references Person( OID ) ;
+
+create table EAdrs
+( oid integer not null,
+  owner_oid integer not null,
+  eadrs_type varchar( 20 ),
+  text varchar( 60 ),
+  primary key( oid )) ;
+
+alter table EAdrs
+  add foreign key ( owner_oid ) references Person( OID ) ;
+
+commit;
+</textarea>
+<p>Note the first table created NEXT_OID. This is required by all databases the framework uses. It provides a central point for handing out Object Identifiers (OIDs). Without this table you will not be able to create any new objects.</p>
+<p>You can run this script using either one of the tools that come with Interbase, or by selecting each statement, one at the time in the tiSQLEditor then clicking the run button. (This is my preferred approach for small scripts)</p>
+<h2>Insert some test data</h2>
+<p>Create another script in the tiSQLEditor and save it as ContactMgr_TestData.sql. Enter the SQL as shown below, then run the script, or run each statement one at the time by selecting it and pressing F8.</p>
+<textarea name="code" class="sql:nogutter:nocontrols" rows="20" cols="75">
+-- *********************************
+--  Create the contact manager test data
+-- *********************************
+insert into Person values
+   ( 1, 'Peter', 'Hinrichsen', 'Mr.', 'P.W.', 'The founder of the tiOPF project' );
+insert into adrs values
+   ( 2, 1, 'Street', '23 Victoria Pde.', 'Collingwood', 'VIC', '3066', 'Australia' );
+insert into adrs values
+   ( 3, 1, 'Postal', 'PO Box 429', 'Abbotsford', 'VIC', '3067', 'Australia' );
+insert into EAdrs values
+   ( 4, 1, 'EMail', 'peter_hinrichsen@dontspamme.com' );
+insert into EAdrs values
+   ( 5, 1, 'Mobile', '0418 108 353' );
+insert into EAdrs values
+   ( 6, 1, 'Fax', '+61 3 9419 1682' );
+commit;
+</textarea>
+<p>Test that the data has been correctly inserted by running the following queries in the tiSQLEditor:</p>
+<textarea name="code" class="sql:nogutter:nocontrols" rows="20" cols="75">
+select * from person ;
+select * from adrs ;
+select * from eadrs ;
+</textarea>
+<p>The results of the third select statement are shown below:</p>
+<p><img width="410" height="173" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image001_0008.gif"></p>
+<p>Now that we have created a database, and inserted some test data we can look at the various strategies available for mapping the database into the business objects we created.</p>
+<h2>Alternative BOM &ndash; database mapping strategies</h2>
+<p>There are three strategies available for mapping objects to a relational database:</p>
+<ol>
+  <li> Hard code the SQL into the application, and use the Visitor framework to map the SQL to the objects. This is implemented by linking in the unit Adrs_SrvHardCodeSQL.pas</li>
+  <li> Use the tiSQLManager application to maintain the SQL outside the application. This has the advantage of decoupling the SQL from the application, but the disadvantage of forcing you to add the tiSQLManager tables to the database. (This will be corrected when we have an XML persistence layer available)</li>
+  <li> Set up mappings between the objects and tables, properties and columns and let the persistence framework generate the SQL for you. This can be implemented by linking in Adrs_SrvAutoGenSQL.pas (This strategy is under construction, and this example will work in most classes. There are some problems with BLOBS, and the way the mappings are defined is a little messy)</li>
+</ol>
+<p>In summary, you must link in one and only one of the three unit files. The best way of achieving this is to create a dependencies unit that will provide a central point for determining the strategy to be used. Create a new unit called ContactMgr_Dependencies, which looks like this:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+unit ContactMgr_Dependencies;
+interface
+uses
+  ContactMgr_BOM,
+//ContactMgr_SvrHardCode
+//ContactMgr_SvrSQLMgr
+  ContactMgr_SvrAutoMap
+ ;
+implementation
+end.
+</textarea>
+<p>As you can see, the above example is using the auto-map option, but switching options is as simple as un-commenting the relevant unit (assuming you have created these units in the first place!). You now need to add this to the project source. Select Project...View Source and modify the source so it looks like the listing below:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+program ContactMgr;
+uses
+  tiLog,
+  tiOPFManager,
+  Forms,
+  FMain In 'FMain.pas' {frmMain},
+  ContactMgr_BOM In 'ContactMgr_BOM.pas',
+  ContactMgr_Cli In 'ContactMgr_Cli.pas',
+  ContactMgr_Tst In 'ContactMgr_Tst.pas',
+  FContactMgr_Person In ' FContactMgr_Person.pas' {TFormContactMgr_Person},
+  ContactMgr_Dependencies In 'ContactMgr_Dependencies.pas';
+{$R *.RES}
+begin
+  SetupLogForClient;
+  Application.Initialize;
+  gTIOPFManager.LoadPersistenceFramework;
+  Application.CreateForm(TfrmMain, frmMain);
+  Application.Run;
+  gTIOPFManager.UnLoadPersistenceFramework;
+end.
+</textarea>
+<h2>Hard code the SQL</h2>
+<p>Create a new unit called ContactMgr_SvrHardCode.pas</p>
+<p>Add tiPtnVisSQL to the visitor and type the interface as shown below:</p>
+<p>Hit Ctrl+Shift+C to fill in the implementation</p>
+<p>Add ContactMgr_BOM, tiQuery and tiObject to the implementation uses clause.</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+unit ContactMgr_SvrHardCode;
+interface
+uses
+  tiVisitorDB
+ ;
+
+type
+  TVisPeopleReadHardCode = class(TVisOwnedQrySelect)
+  protected
+    function  AcceptVisitor: boolean; override;
+    procedure Init; override;
+    procedure SetupParams; override;
+    procedure MapRowToObject; override;
+  end;
+  
+implementation
+uses
+   ContactMgr_BOM
+  ,tiQuery
+  ,tiObject
+  ;
+</textarea>
+<p>In the implementation of AcceptVisitor, type result := Visited is TPerson</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+{ TVisPeopleReadHardCode }
+function TVisPeopleReadHardCode.AcceptVisitor: boolean;
+begin
+  result := (Visited is TPeople);
+end;
+</textarea>
+<p>In the implementation of Init, enter the SQL to select all the people. This can be simplified by entering SELECT * FROM PEOPLE in the tiSQLEditor and executing the query. There is then an option to copy the SQL to the clipboard with the delimeters and line breaks added. The result is shown below:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+procedure TVisPeopleReadHardCode.Init;
+begin
+  Query.SQL.Text :=
+    'select ' +
+    '  OID ' +
+    ' ,FIRST_NAME ' +
+    ' ,LAST_NAME ' +
+    ' ,TITLE ' +
+    ' ,INITIALS ' +
+    ' ,NOTES ' +
+    'from ' +
+    '  person ';
+end;
+</textarea>
+<p>Enter the MapRowToObject implementation as shown below. This is made easier by executing the SELECT SQL, then using the SQL | MapRowToObject to copy the necessary code to the clipboard and pasting it into Delphi. The code looks like this as it is copied to the clipboard.</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+procedure TVisEAdrsReadHardCode.MapRowToObject;
+var
+  lData : T&lt;Class type&gt;;
+begin
+  lData := T&lt;Class type&gt;.Create;
+  lData.Oid.AssignFromTiQuery(Query);
+  lData.FirstName := Query.FieldAsString[ 'FIRST_NAME' ];
+  lData.LastName := Query.FieldAsString[ 'LAST_NAME' ];
+  lData.Title := Query.FieldAsString[ 'TITLE' ];
+  lData.Initials := Query.FieldAsString[ 'INITIALS' ];
+  lData.Notes := Query.FieldAsString[ 'NOTES' ];
+  lData.ObjectState := posClean;
+  TtiObjectList(Visited).Add(lData);
+end;
+</textarea>
+<p>All you have to do is replace the T&lt;Class type&gt; place holders with TPerson and the result looks like this:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+procedure TVisPeopleReadHardCode.MapRowToObject;
+var
+  lData : TPerson 
+begin
+  lData := TPerson.Create;
+  lData.Oid.AssignFromTiQuery(Query);
+  lData.FirstName := Query.FieldAsString[ 'FIRST_NAME' ];
+  lData.LastName := Query.FieldAsString[ 'LAST_NAME' ];
+  lData.Title := Query.FieldAsString[ 'TITLE' ];
+  lData.Initials := Query.FieldAsString[ 'INITIALS' ];
+  lData.Notes := Query.FieldAsString[ 'NOTES' ];
+  lData.ObjectState := posClean;
+  TtiObjectList(Visited).Add(lData);
+end;
+</textarea>
+<p>SetupParams has no code in the implementation:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+procedure TVisPeopleReadHardCode.SetupParams;
+begin
+  // Do nothing
+end;
+</textarea>
+<p>Register the visitor with the persistence framework like this:</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+initialization
+  gTIOPFManager.RegReadVisitor(TVisPeopleReadHardCode);
+end.
+</textarea>
+<p>The 12 Visitors that comprise the full implementation of the Contact Manager persistence visitors, implemented by hard coding SQL can be found in ContactMgr_SrvHardCode.pas.</p>
+<p>Use the tiSQLManager</p>
+<p>Create the tiSQLManager tables</p>
+<textarea name="code" class="sql:nogutter:nocontrols" rows="20" cols="75">
+create domain domain_oid as integer not null ;
+create table Next_OID ( oid domain_oid ) ;
+insert into next_oid ( oid ) values ( 100000 ) ;
+create domain domain_sql as blob sub_type 1 ;
+create domain domain_str20 as varchar( 20 ) not null ;
+create domain domain_str50 as varchar( 50 ) not null ;
+create domain domain_str100 as varchar( 100 ) ;
+create domain domain_integer as integer default 0 not null ;
+create domain domain_boolean as char( 1 ) default 'F' check ( value in ( 'T', 'F' )) ;
+
+-- SQLMan_Group table 
+create table sqlman_group
+   ( oid domain_oid,
+   group_name domain_str50,
+   disp_order domain_integer,
+   primary key ( oid )) ;
+
+-- SQLMan_SQL table
+   create table sqlman_sql
+   ( oid domain_oid,
+   group_oid domain_oid,
+   disp_order domain_integer,
+   query_version domain_integer,
+   query_name domain_str50,
+   query_description domain_sql,
+   query_locked domain_boolean,
+   test_include domain_boolean,
+   sql domain_sql,
+   primary key ( oid )) ;
+   
+-- SQLMan_Param Table
+   create table sqlman_param
+   ( oid domain_oid,
+   sql_oid domain_oid,
+   disp_order domain_integer,
+   param_name domain_str20,
+   param_type domain_str20,
+   param_value domain_str50,
+   param_isnull domain_boolean,
+   primary key ( oid )) ;
+
+-- SQLMan_Interface Table
+   create table sqlman_interface
+   ( oid domain_oid,
+   sql_oid domain_oid,
+   disp_order domain_integer,
+   field_name domain_str20,
+   field_type domain_str20,
+   primary key ( oid )) ;
+
+-- Add ref integ
+   alter table SQLMan_SQL
+     add foreign key ( Group_OID ) references SQLMan_Group ( OID ) ;
+   alter table SQLMan_Param
+     add foreign key ( SQL_OID ) references SQLMan_SQL ( OID ) ;
+   alter table SQLMan_Interface
+     add foreign key ( SQL_OID ) references SQLMan_SQL ( OID ) ;
+-- Add unique constraint
+   create unique index I_SQLMan_Group
+   on SQLMan_Group
+   ( Group_Name ) ;
+create unique index I_SQLMan_SQL
+   on SQLMan_SQL
+   ( Query_Name ) ;
+create unique index I_SQLMan_Param
+   on SQLMan_Param
+   ( SQL_OID, Param_Name ) ;
+create unique index I_SQLMan_Interface
+   on SQLMan_Interface
+   ( SQL_OID, Field_Name ) ;
+insert into sqlman_group
+   ( oid, group_name, disp_order ) values
+   ( 1, 'System', 0 ) ;
+insert into sqlman_group values ( 2, 'Queries', 0 ) ;
+commit;
+</textarea>
+<p>Write the tiSQLManager Visitors</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+Unit ContactMgr_SvrSQLMgr;
+interface
+   uses
+   tiVisitorDB
+   ;
+type
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// *
+// * Read visitors
+// *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+TVisPeopleReadSQLMgr = class(TVisQrySelect)
+protected
+  function  AcceptVisitor: boolean; override;
+  procedure Init; override;
+  procedure SetupParams; override;
+  procedure MapRowToObject; override;
+end;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// *
+// * Delete visitors
+// *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+TVisPeopleDeleteSQLMgr = class(TVisQryUpdate)
+protected
+  function  AcceptVisitor: boolean; override;
+  procedure Init; override;
+  procedure SetupParams; override;
+end;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// *
+// * Update visitors
+// *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+TVisPeopleUpdateSQLMgr = class(TVisQryUpdate)
+protected
+  function  AcceptVisitor: boolean; override;
+  procedure Init; override;
+  procedure SetupParams; override;
+end;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// *
+// * Create visitors
+// *
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+TVisPeopleCreateSQLMgr = class( TVisQryUpdate )
+protected
+  function AcceptVisitor : boolean ; override ;
+  procedure Init ; override ;
+  procedure SetupParams ; override ;
+end ;
+
+implementation
+uses
+   ContactMgr_BOM
+  ,tiQuery
+  ,tiObject
+  ,cQueryNames
+  ;
+ 
+{ TVisPeopleReadSQLMgr }
+function TVisPeopleReadSQLMgr.AcceptVisitor: boolean;
+begin
+  result := (Visited is TPeople);
+end;
+
+procedure TVisPeopleReadSQLMgr.Init;
+begin
+  QueryName := cgQryPerson_Read;
+end;
+
+procedure TVisPeopleReadSQLMgr.MapRowToObject;
+var
+  lData: TPerson;
+begin
+  lData := TPerson.Create;
+  lData.Oid.AssignFromTiQuery(Query);
+  lData.FirstName := Query.FieldAsString[ 'FIRST_NAME' ];
+  lData.LastName := Query.FieldAsString[ 'LAST_NAME' ];
+  lData.Title := Query.FieldAsString[ 'TITLE' ];
+  lData.Initials := Query.FieldAsString[ 'INITIALS' ];
+  lData.Notes := Query.FieldAsString[ 'NOTES' ];
+  lData.ObjectState := posClean;
+  TtiObjectList(Visited).Add(lData);
+end;
+
+procedure TVisPeopleReadSQLMgr.SetupParams;
+begin
+  // Do nothing
+end;
+
+{ TVisPeopleDeleteSQLMgr }
+function TVisPeopleDeleteSQLMgr.AcceptVisitor: boolean;
+begin
+  result := (Visited is TPerson) and
+            (Visited.ObjectState = posDelete);
+end;
+
+procedure TVisPeopleDeleteSQLMgr.Init;
+begin
+  QueryName := cgQryPerson_Delete;
+end;
+
+procedure TVisPeopleDeleteSQLMgr.SetupParams;
+begin
+  Visited.OID.AssignToTiQuery(Query);
+end;
+
+{ TVisPeopleUpdateSQLMgr }
+function TVisPeopleUpdateSQLMgr.AcceptVisitor: boolean;
+begin
+  result := (Visited is TPerson) and
+            (Visited.ObjectState = posUpdate);
+end;
+
+procedure TVisPeopleUpdateSQLMgr.Init;
+begin
+  QueryName := cgQryPerson_Update;
+end;
+   
+procedure TVisPeopleUpdateSQLMgr.SetupParams;
+var
+  lData: TPerson;
+begin
+  lData := TPerson(Visited);
+  lData.Oid.AssignToTiQuery(Query);
+  Query.ParamAsString[ 'FIRST_NAME' ] := lData.FirstName;
+  Query.ParamAsString[ 'LAST_NAME' ] := lData.LastName;
+  Query.ParamAsString[ 'TITLE' ] := lData.Title;
+  Query.ParamAsString[ 'INITIALS' ] := lData.Initials;
+  Query.ParamAsString[ 'NOTES' ] := lData.Notes;
+end;
+
+{ TVisPeopleCreateSQLMgr }
+function TVisPeopleCreateSQLMgr.AcceptVisitor: boolean;
+begin
+  result := (Visited is TPerson) and
+            (Visited.ObjectState = posCreate);
+end;
+   
+procedure TVisPeopleCreateSQLMgr.Init;
+begin
+  QueryName := cgQryPerson_Create;
+end;
+
+procedure TVisPeopleCreateSQLMgr.SetupParams;
+var
+  lData: TPerson;
+begin
+  lData := TPerson(Visited);
+  lData.Oid.AssignToTiQuery(Query);
+  Query.ParamAsString[ 'FIRST_NAME' ] := lData.FirstName;
+  Query.ParamAsString[ 'LAST_NAME' ] := lData.LastName;
+  Query.ParamAsString[ 'TITLE' ] := lData.Title;
+  Query.ParamAsString[ 'INITIALS' ] := lData.Initials;
+  Query.ParamAsString[ 'NOTES' ] := lData.Notes;
+end;
+   
+initialization
+  gTIOPFManager.RegReadVisitor(TVisPeopleReadSQLMgr);
+  gTIOPFManager.RegSaveVisitor(TVisEAdrsDeleteSQLMgr);
+  gTIOPFManager.RegSaveVisitor(TVisPeopleUpdateSQLMgr);
+  gTIOPFManager.RegSaveVisitor(TVisPeopleCreateSQLMgr);
+end.
+</textarea>
+<p>Auto generate the SQL</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75"> 
+unit ContactMgr_SvrAutoMap;
+
+interface
+
+implementation
+uses
+  tiQuery
+  ,tiOPFManager
+  ,tiClassToDBMap_BOM
+  ,ContactMgr_BOM
+  ;
+   
+initialization
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TPerson, 'Person', 'OID', 'OID', [pktDB] ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TPerson, 'Person', 'LastName', 'Last_Name' ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TPerson, 'Person', 'FirstName', 'First_Name' ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TPerson, 'Person', 'Title', 'Title' ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TPerson, 'Person', 'Initials', 'Initials' ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TPerson, 'Person', 'Notes', 'Notes' ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterCollection( TPeople, TPerson ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TAdrsList, 'Adrs', 'OID', 'OID', [pktDB] ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TAdrs, 'Adrs', 'OID', 'OID', [pktDB] ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TAdrs, 'Adrs', 'AdrsType', 'Adrs_Type' ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TAdrs, 'Adrs', 'Lines', 'Lines' ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TAdrs, 'Adrs', 'Suburb', 'Suburb' ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TAdrs, 'Adrs', 'State', 'State' ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TAdrs, 'Adrs', 'PCode', 'PCOde' ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TAdrs, 'Adrs', 'Country', 'Country' ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterCollection( TAdrsList, TAdrs, ['Owner_OID'] ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TEAdrsList, 'EAdrs', 'OID', 'OID', [pktDB] ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TEAdrs, 'EAdrs', 'OID', 'OID', [pktDB] ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TEAdrs, 'EAdrs', 'AdrsType', 'EAdrs_Type' ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterMapping( TEAdrs, 'EAdrs', 'Text', 'Text' ) ;
+  gTIOPFManager.ClassDBMappingMgr.RegisterCollection( TEAdrsList, TEAdrs, ['Owner_OID'] ) ;
+end.
+</textarea>
+<p>Write the GUI and hook it up to the BOM</p>
+<p>TFormMain</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+unit TFormMain
+ 
+implementation
+uses
+   tiObject
+  ,tiGUIUtils
+  ,tiQuery
+  ,tiOPFManager
+  ,tiUtils
+  ,tiRegIni
+  ,ContactMgr_Cli
+  ,ContactMgr_BOM
+  ,FContactMgrChild_Person
+  ,Menus
+  ;
+   
+{$R *.DFM}
+procedure TFormMain.aInsertExecute(Sender: TObject);
+begin
+  TV.DoInsert;
+end;
+
+procedure TFormMain.aDeleteExecute(Sender: TObject);
+begin
+  TV.DoDelete;
+end;
+
+procedure TFormMain.aSaveExecute(Sender: TObject);
+begin
+  gTIOPFManager.Save(gContactMgr);
+end;
+
+procedure TFormMain.aCloseExecute(Sender: TObject);
+begin
+  Close;
+end;
+
+procedure TFormMain.FormCreate(Sender: TObject);
+begin
+  aClose.ShortCut := ShortCut(VK_F4, [ssAlt]); 
+  gReg.ReadFormState(Self);
+  TV.Align := alClient;
+  TV.RegisterChildForm(TPerson, TFormChildPerson);
+  TV.Data := gContactMgr;
+end;
+
+procedure TFormMain.tiTVMappingPersonOnDelete(ptiTreeView: TtiTreeView;
+   pNode: TTreeNode; pData: TObject; pParentNode: TTreeNode;
+   pParentData: TObject);
+begin
+  tiPerObjAbsConfirmAndDelete(pData as TtiObject);
+end;
+
+procedure TFormMain.tiTVMappingPersonOnInsert(ptiTreeView: TtiTreeView;
+   pNode: TTreeNode; pData: TObject; pParentNode: TTreeNode;
+   pParentData: TObject);
+var
+  lData: TPerson;
+begin
+  lData := TPerson.CreateNew;
+  (pParentData as TPeople).Add(lData);
+end;
+
+procedure TFormMain.tiTVMappingPeopleOnInsert(ptiTreeView: TtiTreeView;
+   pNode: TTreeNode; pData: TObject; pParentNode: TTreeNode;
+   pParentData: TObject);
+var
+  lData: TPerson;
+begin
+  lData := TPerson.CreateNew;
+  (pData as TPeople).Add(lData);
+end;
+
+procedure TFormMain.TVFilterData(pData: TObject; var pbInclude: Boolean);
+begin
+  pbInclude := not (pData as TtiObject).Deleted;
+end;
+
+procedure TFormMain.aShowPerObjAbsExecute(Sender: TObject);
+begin
+  tiShowPerObjAbs(TV.SelectedData as TtiObject);
+end;
+
+procedure TFormMain.ALUpdate(Action: TBasicAction; var Handled: Boolean);
+begin
+  aInsert.Enabled := TV.CanInsertSelected;
+  aDelete.Enabled := TV.CanDeleteSelected;
+  aSave.Enabled   := gContactMgr.Dirty;
+end;
+
+procedure TFormMain.FormDestroy(Sender: TObject);
+begin
+  gReg.WriteFormState(Self);
+end;
+</textarea> 
+<p>TformContactChildPerson</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+TformContactChildPerson = class(TForm)
+private
+  FData: TPerson ;
+  FTreeNode: TTreeNode;
+  function  GetValid: boolean;
+  procedure SetData(const Value: TPerson);
+public
+published
+  property  Data: TPerson read FData write SetData;
+  property  Valid: boolean read GetValid;
+  property  TreeNode: TTreeNode read FTreeNode write FTreeNode;
+end;
+
+implementation
+uses
+  tiObject
+  ,FAdrsEdit
+  ,FEAdrsEdit
+  ;
+   
+{$R *.DFM}
+{ TForm1 }
+function TFormChildPerson.GetValid: boolean;
+begin
+  result := true;
+end;
+
+procedure TFormChildPerson.SetData(const Value: TPerson);
+begin
+  FData := Value;
+  paeFirstName.LinkToData(FData, 'FirstName');
+  paeLastName.LinkToData(FData, 'LastName');
+  paeInitials.LinkToData(FData, 'Initials');
+  paeTitle.LinkToData(FData, 'Title');
+  paeNotes.LinkToData(FData, 'Notes');
+  if FData = nil then
+  begin
+    lvAdrs.Data  := nil;
+    lvEAdrs.Data := nil;
+    Exit; //==&gt;
+  end ;
+  lvAdrs.Data  := FData.AdrsList.List;
+  lvEAdrs.Data := FData.EAdrsList.List;
+end;
+
+procedure TFormChildPerson.paeFirstNameChange(Sender: TObject);
+begin
+  if FData &lt;&gt; nil then
+    TreeNode.Text := FData.Caption;
+end;
+
+procedure TFormChildPerson.FormShow(Sender: TObject);
+begin
+  if (FData &lt;&gt; nil) and
+     (FData.ObjectState = posCreate) then
+    paeFirstName.SetFocus;
+end;
+
+procedure TFormChildPerson.lvEAdrsItemInsert(pLV: TtiCustomListView;
+   pData: TPersistent; pItem: TListItem);
+var
+  lData: TEAdrs;
+begin
+  lData := TEAdrs.CreateNew;
+  if TFormEAdrsEdit.Execute(lData) then
+    FData.EAdrsList.Add(lData)
+  else
+    lData.Free;
+end;
+
+procedure TFormChildPerson.lvEAdrsItemEdit(pLV: TtiCustomListView;
+   pData: TPersistent; pItem: TListItem);
+begin
+  TFormEAdrsEdit.Execute(pData as TtiObject);
+end;
+
+procedure TFormChildPerson.lvEAdrsItemDelete(pLV: TtiCustomListView;
+   pData: TPersistent; pItem: TListItem);
+begin
+  tiPerObjAbsConfirmAndDelete(pData as TtiObject);
+end;
+
+procedure TFormChildPerson.lvAdrsItemInsert(pLV: TtiCustomListView;
+   pData: TPersistent; pItem: TListItem);
+var
+  lData: TAdrs;
+begin
+  lData := TAdrs.CreateNew;
+  if TFormAdrsEdit.Execute(lData) then
+     FData.AdrsList.Add(lData)
+   else
+    lData.Free;
+end;
+
+procedure TFormChildPerson.lvAdrsItemEdit(pLV: TtiCustomListView;
+   pData: TPersistent; pItem: TListItem);
+begin
+  TFormAdrsEdit.Execute(pData as TtiObject);
+end;
+
+procedure TFormChildPerson.lvAdrsItemDelete(pLV: TtiCustomListView;
+   pData: TPersistent; pItem: TListItem);
+begin
+  tiPerObjAbsConfirmAndDelete(pData as TtiObject);
+end;
+
+procedure TFormChildPerson.lvEAdrsFilterData(pData: TPersistent;
+   var pbInclude: Boolean);
+begin
+  pbInclude := not (pData as TtiObject).Deleted;
+end;
+</textarea>
+<p>TFormEditAdrs</p>
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75"> 
+type
+
+TFormAdrsEdit = class(TFormTIPerEditDialog)
+private
+  paeLines: TtiPerAwareMemo;
+  paeSuburb: TtiPerAwareEdit;
+  paeState: TtiPerAwareEdit;
+  paePCode: TtiPerAwareEdit;
+  paeCountry: TtiPerAwareEdit;
+  paeAdrsType: TtiPerAwareComboBoxStatic;
+private
+protected
+  procedure SetData(const Value: TtiObject); override;
+  function  FormIsValid: boolean; override;
+public
+end;
+
+implementation
+
+{$R *.DFM}
+
+{ TFormAdrsEdit }
+function TFormAdrsEdit.FormIsValid: boolean;
+begin
+  result := true ;
+end;
+
+procedure TFormAdrsEdit.SetData(const Value: TtiObject);
+begin
+  inherited SetData(Value);
+  paeAdrsType.LinkToData(DataBuffer, 'AdrsType');
+  paeLines.LinkToData(DataBuffer, 'Lines');
+  paeSuburb.LinkToData(DataBuffer, 'Suburb');
+  paeState.LinkToData(DataBuffer, 'State');
+  paePCode.LinkToData(DataBuffer, 'PCode');
+  paeCountry.LinkToData(DataBuffer, 'Country');
+end;
+</textarea>
+<p>TFormEditEAdrs</p> 
+<textarea name="code" class="delphi:nogutter:nocontrols" rows="20" cols="75">
+type
+  TFormEAdrsEdit = class(TFormTIPerEditDialog)
+    paeAdrsType: TtiPerAwareComboBoxStatic;
+    paeText: TtiPerAwareEdit;
+  private
+    { Private declarations }
+  protected
+    procedure SetData(const Value: TtiObject); override;
+    function  FormIsValid: boolean; override;
+  end;
+
+implementation
+
+{$R *.DFM}
+
+{ TFormEAdrsEdit }
+function TFormEAdrsEdit.FormIsValid: boolean;
+begin
+  result := true;
+end;
+
+procedure TFormEAdrsEdit.SetData(const Value: TtiObject);
+begin
+  inherited SetData(Value);
+  paeAdrsType.LinkToData(DataBuffer, 'AdrsType');
+  paeText.LinkToData(DataBuffer, 'Text');
+end;
+</textarea>
+<p><img width="533" height="349" alt="" src="5_AWorkedExampleOfUsingTheTIOPF_Images/6_AWorkedExampleOfUsingTheTIOPF_clip_image002_0009.jpg"></p>
+<h2>Summary</h2>
+<p>In this section we have looked at what is involved in developing a 
+real-world application using the framework. We learnt how to design a Business 
+Object Model (BOM) and create a suitable database schema for storage. We also 
+learnt how to utilise some of the persistent-aware VCL controls that are 
+provided with the framework, as well as looking at the pros and cons of the 
+different BOM to Database mapping strategies. </p>
+<h2>The next section </h2>
+<p>We will discuss how to use the Adaptor pattern and runtime packages to 
+create a swappable database connection 
+layer. <a href="6_TheAdaptorForDatabaseIndependence.shtml">The next section 
+can be read here.</a></p>
+
+<!--#include virtual="/Shared/Footer.html"-->
+
+</body>
+</html>

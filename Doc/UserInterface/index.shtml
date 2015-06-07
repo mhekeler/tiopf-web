@@ -1,0 +1,17 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>Building a tiOPF user interface</title>
+    <!--#include virtual="/Shared/stylesheets.inc"-->
+</head>
+<body>
+<!--#include virtual="/Shared/Header.html"-->
+<h1>Building a tiOPF user interface</h1>
+<p>This is work in progress...
+</p>
+<p>but here are a few screen shots from an application built with the tiApplicationMenuSystem class (that uses <a href="http://www.jrsoftware.org/tb2k.php">ToolBar2000</a>, <a href="http://www.devscripts.com/scripts/3772/Design_eXperience_Package/">dxWinXPBar</a> and images supplied by <a href="http://www.glyfx.com/">GlyFx</a>)</p>
+<p><img src="UserInterfaceExample_01.JPG" width="1024" height="742"></p>
+<p><img src="UserInterfaceExample_02.JPG" width="1024" height="742"></p>
+<!--#include virtual="/Shared/Footer.html"-->
+</body>
+</html>
